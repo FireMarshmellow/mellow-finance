@@ -28,6 +28,26 @@ export function gbp(n) {
   });
 }
 
+// ── Mobile sidebar ─────────────────────────────────────────────────────────
+const sidebar  = document.getElementById("sidebar");
+const overlay  = document.getElementById("sidebar-overlay");
+const hamburger = document.getElementById("hamburger");
+
+function closeSidebar() {
+  sidebar.classList.remove("open");
+  overlay.classList.remove("visible");
+}
+
+function openSidebar() {
+  sidebar.classList.add("open");
+  overlay.classList.add("visible");
+}
+
+hamburger?.addEventListener("click", () =>
+  sidebar.classList.contains("open") ? closeSidebar() : openSidebar()
+);
+overlay?.addEventListener("click", closeSidebar);
+
 // ── Active nav link ────────────────────────────────────────────────────────
 function setActiveNav(page) {
   document.querySelectorAll(".nav-item").forEach(el => {
@@ -59,5 +79,5 @@ async function route() {
   }
 }
 
-window.addEventListener("hashchange", route);
+window.addEventListener("hashchange", () => { closeSidebar(); route(); });
 route();   // initial load
