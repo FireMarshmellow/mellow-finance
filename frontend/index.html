@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mellow Labs Financials</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <!-- Flatpickr date picker -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body>
+
+<!-- ─── Sidebar ─────────────────────────────────────────────────────────── -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <span class="logo-icon">◈</span>
+      <span class="logo-text">Mellow Labs</span>
+    </div>
+    <div class="sidebar-sub">Financials</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">SUMMARIES</div>
+    <a class="nav-item" href="#/yearly"  data-page="yearly">
+      <span class="nav-icon">📊</span> Financial Year
+    </a>
+    <a class="nav-item" href="#/monthly" data-page="monthly">
+      <span class="nav-icon">📅</span> Monthly
+    </a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">INCOME</div>
+    <a class="nav-item" href="#/sheet/youtube_adsense"  data-page="sheet/youtube_adsense">
+      <span class="nav-icon income-dot">▸</span> YouTube AdSense
+    </a>
+    <a class="nav-item" href="#/sheet/patreon"         data-page="sheet/patreon">
+      <span class="nav-icon income-dot">▸</span> Patreon
+    </a>
+    <a class="nav-item" href="#/sheet/sponsorships"    data-page="sheet/sponsorships">
+      <span class="nav-icon income-dot">▸</span> Sponsorships
+    </a>
+    <a class="nav-item" href="#/sheet/other_income"    data-page="sheet/other_income">
+      <span class="nav-icon income-dot">▸</span> Other Income
+    </a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">EXPENSES</div>
+    <a class="nav-item" href="#/sheet/amazon"          data-page="sheet/amazon">
+      <span class="nav-icon expense-dot">▸</span> Amazon
+    </a>
+    <a class="nav-item" href="#/sheet/ebay"            data-page="sheet/ebay">
+      <span class="nav-icon expense-dot">▸</span> eBay
+    </a>
+    <a class="nav-item" href="#/sheet/aliexpress"      data-page="sheet/aliexpress">
+      <span class="nav-icon expense-dot">▸</span> AliExpress
+    </a>
+    <a class="nav-item" href="#/sheet/other_expenses"  data-page="sheet/other_expenses">
+      <span class="nav-icon expense-dot">▸</span> Other Expenses
+    </a>
+  </div>
+</nav>
+
+<!-- ─── Main ────────────────────────────────────────────────────────────── -->
+<main class="main" id="main">
+  <div class="page-content" id="page-content">
+    <!-- Pages rendered here by JS router -->
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading…</p>
+    </div>
+  </div>
+</main>
+
+<!-- Toast notifications -->
+<div id="toast-container"></div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>
