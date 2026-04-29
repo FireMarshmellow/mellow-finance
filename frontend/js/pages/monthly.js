@@ -98,14 +98,21 @@ function transactionPanels(transactions) {
   const totalIncome  = income.reduce((s, t) => s + t.amount_gbp, 0);
   const totalExpense = expenses.reduce((s, t) => s + t.amount_gbp, 0);
 
-  const rows = items => items.map(t => `
+  const incomeRows = items => items.map(t => `
     <tr>
       <td class="txn-date">${fmtDate(t.date)}</td>
       <td class="txn-source">${t.source}</td>
       <td class="txn-amount">${gbp(t.amount_gbp)}</td>
     </tr>`).join("");
 
-  const panel = (title, items, total, cls) => `
+  const expenseRows = items => items.map(t => `
+    <tr>
+      <td class="txn-date">${fmtDate(t.date)}</td>
+      <td class="txn-source">${t.description || t.source}</td>
+      <td class="txn-amount">${gbp(t.amount_gbp)}</td>
+    </tr>`).join("");
+
+  const panel = (title, items, total, cls, rowFn, col2) => `
     <div class="txn-panel">
       <div class="txn-panel-header ${cls}">
         <span class="txn-panel-title">${title}</span>
@@ -114,16 +121,16 @@ function transactionPanels(transactions) {
       ${items.length ? `
         <div class="table-scroll" style="max-height:420px">
           <table class="txn-table">
-            <thead><tr><th>Date</th><th>Source</th><th>Amount</th></tr></thead>
-            <tbody>${rows(items)}</tbody>
+            <thead><tr><th>Date</th><th>${col2}</th><th>Amount</th></tr></thead>
+            <tbody>${rowFn(items)}</tbody>
           </table>
         </div>` : `<div class="empty-state" style="padding:24px">No transactions</div>`}
     </div>`;
 
   return `
     <div class="txn-grid">
-      ${panel("Income",   income,   totalIncome,  "income")}
-      ${panel("Expenses", expenses, totalExpense, "expense")}
+      ${panel("Income",   income,   totalIncome,  "income",  incomeRows,  "Source")}
+      ${panel("Expenses", expenses, totalExpense, "expense", expenseRows, "Item")}
     </div>`;
 }
 

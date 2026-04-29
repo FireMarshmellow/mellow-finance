@@ -46,6 +46,7 @@ def transactions(start: Optional[date] = None, end: Optional[date] = None):
                 "source":      row["source"],
                 "category":    row["category"],
                 "amount_gbp":  round(float(row["amount_gbp"]), 2),
+                "description": row.get("description", ""),
             }
             for _, row in df.iterrows()
         ]

@@ -71,7 +71,7 @@ def _normalise_youtube(df: pd.DataFrame) -> list:
         if d is None or amt is None:
             continue
         records.append({"source": "YouTube AdSense", "category": "income",
-                         "transaction_date": d, "amount_gbp": amt})
+                         "transaction_date": d, "amount_gbp": amt, "description": ""})
     return records
 
 
@@ -88,7 +88,7 @@ def _normalise_patreon(df: pd.DataFrame) -> list:
         if d is None or amt is None:
             continue
         records.append({"source": "Patreon", "category": "income",
-                         "transaction_date": d, "amount_gbp": amt})
+                         "transaction_date": d, "amount_gbp": amt, "description": ""})
     return records
 
 
@@ -106,7 +106,7 @@ def _normalise_sponsorships(df: pd.DataFrame) -> list:
         if d is None or amt is None:
             continue
         records.append({"source": "Sponsorships", "category": "income",
-                         "transaction_date": d, "amount_gbp": amt})
+                         "transaction_date": d, "amount_gbp": amt, "description": ""})
     return records
 
 
@@ -120,13 +120,14 @@ def _normalise_other_income(df: pd.DataFrame) -> list:
         if d is None or amt is None:
             continue
         records.append({"source": "Other Income", "category": "income",
-                         "transaction_date": d, "amount_gbp": amt})
+                         "transaction_date": d, "amount_gbp": amt, "description": ""})
     return records
 
 
 def _normalise_expense(df: pd.DataFrame, source: str) -> list:
     date_col   = _col(df, "Order_Date", "order_date", "order date", "Date")
     amount_col = _col(df, "Order_Total", "order_total", "total_owed", "Total_Owed", "total owed")
+    desc_col   = _col(df, "product name", "Product_Name", "Item_Title", "item_title", "Description")
     if date_col is None or amount_col is None:
         return []
     records = []
@@ -135,8 +136,10 @@ def _normalise_expense(df: pd.DataFrame, source: str) -> list:
         amt = _clean_amount(row.get(amount_col))
         if d is None or amt is None:
             continue
+        desc = str(row.get(desc_col, "")).strip() if desc_col else ""
         records.append({"source": source, "category": "expense",
-                         "transaction_date": d, "amount_gbp": amt})
+                         "transaction_date": d, "amount_gbp": amt,
+                         "description": desc})
     return records
 
 
