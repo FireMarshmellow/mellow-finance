@@ -22,6 +22,12 @@ export const api = {
   monthlySummary: ()              => _req("GET",    "/api/summary/monthly"),
   rangeSummary:   (start, end)    => _req("GET",    `/api/summary/range?start=${start}&end=${end}`),
 
+  // Individual transactions
+  getTransactions: (start, end) => {
+    const q = start && end ? `?start=${start}&end=${end}` : "";
+    return _req("GET", `/api/summary/transactions${q}`);
+  },
+
   // Raw sheet data
   getSheet:   (id)           => _req("GET",    `/api/data/${id}`),
   addRow:     (id, row)      => _req("POST",   `/api/data/${id}`, row),

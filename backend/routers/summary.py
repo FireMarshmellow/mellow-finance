@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 
@@ -28,3 +29,24 @@ def range_summary(start: date, end: date):
     if start > end:
         raise HTTPException(status_code=422, detail="start must be on or before end")
     return get_range_summary(_canonical(), start, end)
+
+
+@router.get("/transactions")
+def transactions(start: Optional[date] = None, end: Optional[date] = None):
+    df = _canonical()
+    if start and end:
+        if start > end:
+            raise HTTPException(status_code=422, detail="start must be on or before end")
+        df = df[(df["transaction_date"] >= start) & (df["transaction_date"] <= end)]
+    df = df.sort_values("transaction_date", ascending=False)
+    return {
+        "transactions": [
+            {
+                "date":        str(row["transaction_date"]),
+                "source":      row["source"],
+                "category":    row["category"],
+                "amount_gbp":  round(float(row["amount_gbp"]), 2),
+            }
+            for _, row in df.iterrows()
+        ]
+    }

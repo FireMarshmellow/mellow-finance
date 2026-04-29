@@ -1,5 +1,6 @@
 import { api }  from "../api.js";
 import { gbp, showLoading, toast } from "../app.js";
+
 import {
   buildIncomeExpenseBar,
   buildNetTrend,
@@ -85,21 +86,65 @@ function summaryTable(rows) {
     </div>`;
 }
 
+function fmtDate(iso) {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function transactionPanels(transactions) {
+  const income   = transactions.filter(t => t.category === "income");
+  const expenses = transactions.filter(t => t.category === "expense");
+
+  const totalIncome  = income.reduce((s, t) => s + t.amount_gbp, 0);
+  const totalExpense = expenses.reduce((s, t) => s + t.amount_gbp, 0);
+
+  const rows = items => items.map(t => `
+    <tr>
+      <td class="txn-date">${fmtDate(t.date)}</td>
+      <td class="txn-source">${t.source}</td>
+      <td class="txn-amount">${gbp(t.amount_gbp)}</td>
+    </tr>`).join("");
+
+  const panel = (title, items, total, cls) => `
+    <div class="txn-panel">
+      <div class="txn-panel-header ${cls}">
+        <span class="txn-panel-title">${title}</span>
+        <span class="txn-panel-total">${gbp(total)}</span>
+      </div>
+      ${items.length ? `
+        <div class="table-scroll" style="max-height:420px">
+          <table class="txn-table">
+            <thead><tr><th>Date</th><th>Source</th><th>Amount</th></tr></thead>
+            <tbody>${rows(items)}</tbody>
+          </table>
+        </div>` : `<div class="empty-state" style="padding:24px">No transactions</div>`}
+    </div>`;
+
+  return `
+    <div class="txn-grid">
+      ${panel("Income",   income,   totalIncome,  "income")}
+      ${panel("Expenses", expenses, totalExpense, "expense")}
+    </div>`;
+}
+
 async function fetchAndRender(start, end) {
   const chartsEl = document.getElementById("charts-area");
   const statsEl  = document.getElementById("stats-area");
   const tableEl  = document.getElementById("table-area");
+  const txnEl    = document.getElementById("txn-area");
   if (!chartsEl) return;
 
   chartsEl.innerHTML = `<div class="loading-state" style="padding:40px"><div class="spinner"></div></div>`;
   statsEl.innerHTML  = "";
   tableEl.innerHTML  = "";
+  txnEl.innerHTML    = "";
 
-  let data;
+  let data, txnData;
   try {
-    data = start && end
-      ? await api.rangeSummary(start, end)
-      : await api.monthlySummary();
+    [data, txnData] = await Promise.all([
+      start && end ? api.rangeSummary(start, end) : api.monthlySummary(),
+      api.getTransactions(start, end),
+    ]);
   } catch (err) {
     chartsEl.innerHTML = `<div class="error-banner">⚠ ${err.message}</div>`;
     return;
@@ -131,6 +176,7 @@ async function fetchAndRender(start, end) {
     </div>`;
 
   tableEl.innerHTML = summaryTable(rows);
+  txnEl.innerHTML   = transactionPanels(txnData.transactions);
 
   buildIncomeExpenseBar(document.getElementById("chart-bar"),     rows);
   buildNetTrend        (document.getElementById("chart-net"),     rows);
@@ -166,6 +212,7 @@ export async function renderMonthly(container) {
     <div id="stats-area"></div>
     <div id="charts-area"></div>
     <div id="table-area"></div>
+    <div id="txn-area"></div>
   `;
 
   // Wire up flatpickr
