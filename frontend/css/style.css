@@ -145,6 +145,14 @@ body { display: flex; }
 }
 
 .nav-icon { font-size: 12px; flex-shrink: 0; }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 20px;
+  font-size: 11px;
+  color: #334155;
+  border-top: 1px solid var(--sidebar-border);
+}
 .income-dot { color: var(--income); }
 .expense-dot { color: var(--expense); }
 
