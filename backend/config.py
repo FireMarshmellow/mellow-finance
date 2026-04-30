@@ -30,6 +30,9 @@ SHEET_META = {
     "other_expenses":  {"label": "Other Expenses",   "category": "expense"},
 }
 
+SPONSOR_CSV   = DATA_DIR / "Sponsor Tracker - Sponserd videos.csv"
+SETTINGS_FILE = DATA_DIR / "settings.json"
+
 INCOME_SOURCES  = ["YouTube AdSense", "Patreon", "Sponsorships", "Other Income"]
 EXPENSE_SOURCES = ["Amazon", "eBay", "AliExpress", "Other Expenses"]
 

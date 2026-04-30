@@ -36,4 +36,17 @@ export const api = {
 
   // Metadata
   meta: () => _req("GET", "/api/meta"),
+
+  // Sponsor Tracker
+  sponsorList:        ()           => _req("GET",    "/api/sponsors/"),
+  sponsorsList:       ()           => _req("GET",    "/api/sponsors/sponsors-list"),
+  sponsorAdd:         (body)       => _req("POST",   "/api/sponsors/add", body),
+  sponsorUpdate:      (idx, patch) => _req("PATCH",  `/api/sponsors/${idx}`, patch),
+  sponsorDelete:      (idx)        => _req("DELETE", `/api/sponsors/${idx}`),
+  sponsorRefresh:     (idx)        => _req("POST",   "/api/sponsors/refresh", { row_index: idx }),
+  sponsorAutoRefresh: ()           => _req("POST",   "/api/sponsors/auto-refresh"),
+
+  // Settings
+  getSettings:  ()      => _req("GET", "/api/settings/"),
+  saveSettings: (body)  => _req("PUT", "/api/settings/", body),
 };

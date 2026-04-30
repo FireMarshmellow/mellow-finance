@@ -1,7 +1,9 @@
 /** Hash-based SPA router + global utilities. */
-import { renderYearly }  from "./pages/yearly.js";
-import { renderMonthly } from "./pages/monthly.js";
-import { renderSheet }   from "./pages/sheet.js";
+import { renderYearly }        from "./pages/yearly.js";
+import { renderMonthly }       from "./pages/monthly.js";
+import { renderSheet }         from "./pages/sheet.js";
+import { renderSponsorTracker } from "./pages/sponsorTracker.js";
+import { renderSettings }      from "./pages/settings.js";
 
 const content = document.getElementById("page-content");
 
@@ -70,6 +72,10 @@ async function route() {
       await renderMonthly(content);
     } else if (page === "sheet" && parts[1]) {
       await renderSheet(content, parts[1]);
+    } else if (page === "sponsor-tracker") {
+      await renderSponsorTracker(content);
+    } else if (page === "settings") {
+      await renderSettings(content);
     } else {
       content.innerHTML = `<div class="empty-state">Page not found.</div>`;
     }
