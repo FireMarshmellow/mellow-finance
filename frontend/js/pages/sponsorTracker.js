@@ -125,10 +125,15 @@ function renderRow(v) {
     : "";
 
   const left = v.milestones_enabled && v.tracking_active ? daysLeft(v.release_date_iso) : null;
+  const daysTag = left !== null
+    ? `<span class="days-left ${left <= 3 ? "days-urgent" : left <= 10 ? "days-soon" : ""}">${left}d left</span>`
+    : "";
   const milestoneCell = v.milestones_enabled
-    ? `<span class="sponsor-payout ${tierClass(v.milestone_payout)}">${gbp(v.milestone_payout)}</span>
-       <span class="sponsor-pill ${v.bonus_paid === "Paid" ? "paid" : "pending"} pill-sm">${v.bonus_paid === "Paid" ? "Paid" : "Pending"}</span>
-       ${left !== null ? `<span class="days-left">${left}d left</span>` : ""}`
+    ? `<div class="sponsor-payout ${tierClass(v.milestone_payout)}">${gbp(v.milestone_payout)}</div>
+       <div class="milestone-status-row">
+         <span class="sponsor-pill ${v.bonus_paid === "Paid" ? "paid" : "pending"} pill-sm">${v.bonus_paid === "Paid" ? "Paid" : "Pending"}</span>
+         ${daysTag}
+       </div>`
     : `<span class="na-label">N/A</span>`;
 
   const flatRateCell = v.flat_rate_enabled

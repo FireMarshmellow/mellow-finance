@@ -910,7 +910,7 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
 .sponsor-row:hover { background: #f8fafc; }
 
 .sponsor-row td {
-  padding: 10px 12px;
+  padding: 14px 12px;
   vertical-align: middle;
 }
 
@@ -958,33 +958,32 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
 }
 
 /* Title cell */
-.col-title { min-width: 200px; }
+.col-title { min-width: 220px; }
 
 .sponsor-title {
   font-weight: 600;
   color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 280px;
+  white-space: normal;
+  line-height: 1.4;
 }
 
 .sponsor-meta-line {
   font-size: 11px;
   color: var(--text-faint);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 /* Sponsor name */
-.col-sponsor { width: 120px; }
-.sponsor-name-text { font-size: 12px; color: var(--text-muted); }
+.col-sponsor { width: 150px; }
+.sponsor-name-text { font-size: 13px; color: var(--text-muted); }
 
 /* Views */
 .col-views { width: 90px; white-space: nowrap; }
 .sponsor-views { font-weight: 600; color: var(--text); }
 
 /* Milestone / flat rate cells */
-.col-milestone, .col-flatrate { width: 110px; }
+.col-milestone { width: 160px; }
+.col-flatrate  { width: 110px; }
 
 .sponsor-cell-stack {
   display: flex;
@@ -994,21 +993,45 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
 }
 
 /* Milestone tiers */
-.sponsor-payout { font-weight: 700; font-size: 13px; }
+.sponsor-payout { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
 .tier-300 { color: #d97706; }
 .tier-200 { color: #7c3aed; }
 .tier-100 { color: var(--accent); }
 .tier-0   { color: var(--text-faint); }
 
+/* Status row: pill + days badge side by side */
+.milestone-status-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 /* N/A label */
 .na-label { font-size: 11px; color: var(--text-faint); }
 
-/* Days-left countdown */
+/* Days-left badge */
 .days-left {
+  display: inline-flex;
+  align-items: center;
   font-size: 10px;
-  font-weight: 600;
-  color: var(--text-faint);
+  font-weight: 700;
   letter-spacing: .2px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(100,116,139,.1);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.days-left.days-soon {
+  background: rgba(234,179,8,.12);
+  color: #b45309;
+}
+
+.days-left.days-urgent {
+  background: rgba(239,68,68,.12);
+  color: #dc2626;
 }
 
 /* Paid / Pending pills */
