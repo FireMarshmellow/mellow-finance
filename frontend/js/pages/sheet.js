@@ -38,6 +38,10 @@ let _sheetId   = null;
 let _container = null;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+function isDateCol(col) {
+  return /date/i.test(col);
+}
+
 function escHtml(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
@@ -155,6 +159,19 @@ function wireResizeHandles(wrapper) {
 function wireTable(wrapper, columns, rows) {
   wireResizeHandles(wrapper);
 
+  // Attach flatpickr to date-column cell inputs
+  wrapper.querySelectorAll("td[data-col]").forEach(td => {
+    if (!isDateCol(td.dataset.col)) return;
+    const input = td.querySelector(".cell-input");
+    flatpickr(input, {
+      dateFormat: "d/m/Y",
+      allowInput: false,
+      onClose() {
+        setTimeout(() => input.blur(), 0);
+      },
+    });
+  });
+
   // Cell click → activate editing
   wrapper.querySelectorAll("td[data-col]").forEach(td => {
     td.addEventListener("click", () => {
@@ -236,7 +253,9 @@ async function addRow(columns) {
 
   const fields = columns.map(col => `
     <td>
-      <input type="text" name="${escHtml(col)}" placeholder="${escHtml(col)}"
+      <input type="text" name="${escHtml(col)}"
+             placeholder="${isDateCol(col) ? "DD/MM/YYYY" : escHtml(col)}"
+             ${isDateCol(col) ? 'data-datepicker="true"' : ""}
              style="width:100%;padding:6px 10px;border:1px solid var(--accent);border-radius:4px;
                     font-size:12px;font-family:inherit;background:#f0f9ff;outline:none;" />
     </td>`).join("");
@@ -254,6 +273,11 @@ async function addRow(columns) {
   const tbody = document.querySelector(".sheet-table tbody");
   if (!tbody) return;
   tbody.prepend(formRow);
+
+  // Attach flatpickr to date fields in the new row
+  formRow.querySelectorAll('input[data-datepicker="true"]').forEach(input => {
+    flatpickr(input, { dateFormat: "d/m/Y", allowInput: false });
+  });
 
   // Focus first input
   formRow.querySelector("input")?.focus();
