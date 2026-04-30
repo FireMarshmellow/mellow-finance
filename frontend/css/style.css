@@ -833,9 +833,46 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
 
   .toast { font-size: 12px; }
 
-  .sponsor-table .col-sponsor,
-  .sponsor-table .col-flatrate { display: none; }
-  .sponsor-title { max-width: 160px; }
+  .sponsor-list-cards { padding: 8px; gap: 6px; }
+
+  .sponsor-card { flex-wrap: wrap; gap: 8px 10px; padding: 10px 12px; }
+
+  .sc-thumb-wrap { width: 80px; }
+
+  .sc-meta { flex: 1; min-width: 0; }
+  .sc-title { max-width: none; }
+
+  .sc-actions {
+    flex-direction: row;
+    border: none;
+    background: none;
+    padding: 0;
+    align-self: flex-start;
+  }
+
+  .sc-sponsor-box {
+    display: flex;
+    width: auto;
+    flex: 1;
+    min-width: 90px;
+    padding: 6px 10px;
+  }
+
+  .sc-payments {
+    display: flex;
+    flex-direction: row;
+    flex: 2;
+    gap: 5px;
+  }
+
+  .sc-pay-box {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
   .settings-card { padding: 16px 18px; }
   .modal-card { margin: 0 8px; }
 }
@@ -881,60 +918,47 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
 
 .sponsor-add-bar input[type="text"]:focus { border-color: var(--accent); }
 
-/* ── Sponsor list table ──────────────────────────────────────────────────── */
+/* ── Sponsor list cards ──────────────────────────────────────────────────── */
 
-.sponsor-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+.sponsor-list-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
 }
 
-.sponsor-table thead th {
-  padding: 10px 12px;
-  text-align: left;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  color: var(--text-faint);
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
+.sponsor-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  transition: box-shadow .15s;
 }
 
-.sponsor-row {
-  border-bottom: 1px solid var(--border);
-  transition: background .1s;
-}
+.sponsor-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.07); }
 
-.sponsor-row:last-child { border-bottom: none; }
-.sponsor-row:hover { background: #f8fafc; }
-
-.sponsor-row td {
-  padding: 14px 12px;
-  vertical-align: middle;
-}
-
-/* Thumbnail cell */
-.col-thumb { width: 108px; padding: 8px 10px 8px 16px !important; }
-
-.sponsor-thumb-wrap {
+/* Thumbnail */
+.sc-thumb-wrap {
   position: relative;
-  width: 96px;
+  width: 108px;
   aspect-ratio: 16/9;
   background: #1e293b;
-  border-radius: 6px;
+  border-radius: 7px;
   overflow: hidden;
   flex-shrink: 0;
 }
 
-.sponsor-thumb-wrap img {
+.sc-thumb-wrap img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-/* Inline tracking badge on thumbnail */
+/* Tracking badge on thumbnail */
 .tracking-badge-sm {
   position: absolute;
   bottom: 4px;
@@ -947,94 +971,135 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
   line-height: 1.4;
 }
 
-.tracking-badge-sm.active {
-  background: rgba(16,185,129,.85);
-  color: #fff;
+.tracking-badge-sm.active { background: rgba(16,185,129,.85); color: #fff; }
+.tracking-badge-sm.ended  { background: rgba(30,41,59,.75);   color: #94a3b8; }
+
+/* Meta: title / views / date */
+.sc-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.tracking-badge-sm.ended {
-  background: rgba(30,41,59,.75);
-  color: #94a3b8;
-}
-
-/* Title cell */
-.col-title { min-width: 220px; }
-
-.sponsor-title {
+.sc-title {
   font-weight: 600;
+  font-size: 13px;
   color: var(--text);
-  white-space: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1.4;
 }
 
-.sponsor-meta-line {
-  font-size: 11px;
-  color: var(--text-faint);
-  margin-top: 3px;
+.sc-views {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
-/* Sponsor name */
-.col-sponsor { width: 150px; }
-.sponsor-name-text { font-size: 13px; color: var(--text-muted); }
+.sc-date {
+  font-size: 11px;
+  color: var(--text-faint);
+}
 
-/* Views */
-.col-views { width: 90px; white-space: nowrap; }
-.sponsor-views { font-weight: 600; color: var(--text); }
-
-/* Milestone / flat rate cells */
-.col-milestone { width: 160px; }
-.col-flatrate  { width: 110px; }
-
-.sponsor-cell-stack {
+/* Sponsor box (blue border) */
+.sc-sponsor-box {
+  width: 130px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1.5px solid #3b82f6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.sc-sponsor-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3b82f6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+
+.sc-days-left {
+  font-size: 11px;
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+.sc-days-left.days-soon   { color: #b45309; }
+.sc-days-left.days-urgent { color: #dc2626; }
+.sc-days-left.sc-days-na  { color: var(--text-faint); font-weight: 400; }
+
+/* Payment boxes (green border) */
+.sc-payments {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.sc-pay-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1.5px solid #22c55e;
+  border-radius: 7px;
+  padding: 6px 12px;
+  min-width: 150px;
+}
+
+.sc-pay-box.sc-pending { border-color: #f59e0b; }
+.sc-pay-box.sc-disabled { border-color: var(--border); }
+
+.sc-pay-label {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.sc-pay-amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
 }
 
 /* Milestone tiers */
-.sponsor-payout { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
 .tier-300 { color: #d97706; }
 .tier-200 { color: #7c3aed; }
 .tier-100 { color: var(--accent); }
 .tier-0   { color: var(--text-faint); }
 
-/* Status row: pill + days badge side by side */
-.milestone-status-row {
+.sc-pay-status {
+  font-size: 11px;
+  font-weight: 600;
+  color: #22c55e;
+}
+
+.sc-pay-box.sc-pending .sc-pay-status  { color: #f59e0b; }
+.sc-pay-box.sc-disabled .sc-pay-status { color: var(--text-faint); font-weight: 400; }
+
+/* Actions group */
+.sc-actions {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  background: #f8fafc;
 }
 
-/* N/A label */
-.na-label { font-size: 11px; color: var(--text-faint); }
-
-/* Days-left badge */
-.days-left {
-  display: inline-flex;
-  align-items: center;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .2px;
-  padding: 2px 7px;
-  border-radius: 10px;
-  background: rgba(100,116,139,.1);
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.days-left.days-soon {
-  background: rgba(234,179,8,.12);
-  color: #b45309;
-}
-
-.days-left.days-urgent {
-  background: rgba(239,68,68,.12);
-  color: #dc2626;
-}
-
-/* Paid / Pending pills */
+/* Paid / Pending pills (modal) */
 .toggle-pill {
   display: inline-flex;
   align-items: center;
@@ -1064,13 +1129,8 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
 .toggle-pill:hover { opacity: .8; }
 .toggle-pill:disabled { opacity: .5; cursor: not-allowed; }
 
-/* Compact pill variant (used in table rows) */
-.pill-sm { font-size: 10px; padding: 1px 8px; }
-
-/* Actions column */
-.col-actions { width: 90px; white-space: nowrap; }
-
-.sponsor-actions { display: flex; gap: 4px; align-items: center; }
+/* N/A label */
+.na-label { font-size: 11px; color: var(--text-faint); }
 
 .btn-icon {
   width: 28px;

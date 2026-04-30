@@ -95,25 +95,7 @@ function renderList() {
   if (!_videos.length) {
     return `<div class="empty-state" style="padding:40px 0">No videos tracked yet. Paste a YouTube URL above to get started.</div>`;
   }
-
-  const rows = _videos.map((v) => renderRow(v)).join("");
-
-  return `
-    <table class="sponsor-table">
-      <thead>
-        <tr>
-          <th class="col-thumb"></th>
-          <th class="col-title">Video</th>
-          <th class="col-sponsor">Sponsor</th>
-          <th class="col-views">Views</th>
-          <th class="col-milestone">Milestone</th>
-          <th class="col-flatrate">Flat Rate</th>
-          <th class="col-actions"></th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
+  return `<div class="sponsor-list-cards">${_videos.map(renderRow).join("")}</div>`;
 }
 
 function renderRow(v) {
@@ -125,53 +107,49 @@ function renderRow(v) {
     : "";
 
   const left = v.milestones_enabled && v.tracking_active ? daysLeft(v.release_date_iso) : null;
-  const daysTag = left !== null
-    ? `<span class="days-left ${left <= 3 ? "days-urgent" : left <= 10 ? "days-soon" : ""}">${left}d left</span>`
+  const daysTag = (left !== null && left > 0)
+    ? `<span class="sc-days-left ${left <= 3 ? "days-urgent" : left <= 10 ? "days-soon" : ""}">${left}d left</span>`
     : "";
-  const milestoneCell = v.milestones_enabled
-    ? `<div class="sponsor-payout ${tierClass(v.milestone_payout)}">${gbp(v.milestone_payout)}</div>
-       <div class="milestone-status-row">
-         <span class="sponsor-pill ${v.bonus_paid === "Paid" ? "paid" : "pending"} pill-sm">${v.bonus_paid === "Paid" ? "Paid" : "Pending"}</span>
-         ${daysTag}
-       </div>`
-    : `<span class="na-label">N/A</span>`;
 
-  const flatRateCell = v.flat_rate_enabled
-    ? `<span class="sponsor-pill ${v.flat_rate_paid === "Paid" ? "paid" : "pending"} pill-sm">${v.flat_rate_paid === "Paid" ? "Paid" : "Pending"}</span>`
-    : `<span class="na-label">N/A</span>`;
+  const flatRateBox = v.flat_rate_enabled
+    ? `<div class="sc-pay-box ${v.flat_rate_paid === "Paid" ? "sc-paid" : "sc-pending"}">
+         <span class="sc-pay-label">Flat Rate</span>
+         <span class="sc-pay-status">${v.flat_rate_paid === "Paid" ? "Paid" : "Pending"}</span>
+       </div>`
+    : `<div class="sc-pay-box sc-disabled"><span class="sc-pay-label">Flat Rate</span><span class="sc-pay-status">N/A</span></div>`;
+
+  const milestoneBox = v.milestones_enabled
+    ? `<div class="sc-pay-box ${v.bonus_paid === "Paid" ? "sc-paid" : "sc-pending"}">
+         <span class="sc-pay-amount ${tierClass(v.milestone_payout)}">${gbp(v.milestone_payout)}</span>
+         <span class="sc-pay-status">${v.bonus_paid === "Paid" ? "Paid" : "Pending"}</span>
+       </div>`
+    : `<div class="sc-pay-box sc-disabled"><span class="sc-pay-amount">—</span><span class="sc-pay-status">N/A</span></div>`;
 
   return `
-    <tr class="sponsor-row" data-row="${v.row_index}">
-      <td class="col-thumb">
-        <div class="sponsor-thumb-wrap">
-          ${thumb}
-          <span class="tracking-badge-sm ${badgeClass}">${badgeText}</span>
-        </div>
-      </td>
-      <td class="col-title">
-        <div class="sponsor-title" title="${esc(v.title)}">${esc(v.title)}</div>
-        <div class="sponsor-meta-line">${fmtDate(v.release_date_iso)}${v.last_updated ? ` · updated ${v.last_updated}` : ""}</div>
-      </td>
-      <td class="col-sponsor">
-        <span class="sponsor-name-text">${esc(v.sponsor) || "<span class='na-label'>—</span>"}</span>
-      </td>
-      <td class="col-views">
-        <span class="sponsor-views">${Number(v.views).toLocaleString()}</span>
-      </td>
-      <td class="col-milestone">
-        <div class="sponsor-cell-stack">${milestoneCell}</div>
-      </td>
-      <td class="col-flatrate">
-        <div class="sponsor-cell-stack">${flatRateCell}</div>
-      </td>
-      <td class="col-actions">
-        <div class="sponsor-actions">
-          <button class="btn-icon btn-edit" data-row="${v.row_index}" title="Edit">✎</button>
-          <button class="btn-icon btn-refresh" data-row="${v.row_index}" title="Refresh views">↻</button>
-          <button class="btn-icon btn-delete danger" data-row="${v.row_index}" title="Remove">✕</button>
-        </div>
-      </td>
-    </tr>
+    <div class="sponsor-card" data-row="${v.row_index}">
+      <div class="sc-thumb-wrap">
+        ${thumb}
+        <span class="tracking-badge-sm ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="sc-meta">
+        <div class="sc-title" title="${esc(v.title)}">${esc(v.title)}</div>
+        <div class="sc-views">${Number(v.views).toLocaleString()} views</div>
+        <div class="sc-date">${fmtDate(v.release_date_iso) || "—"}</div>
+      </div>
+      <div class="sc-sponsor-box">
+        <div class="sc-sponsor-name">${esc(v.sponsor) || "—"}</div>
+        ${daysTag}
+      </div>
+      <div class="sc-payments">
+        ${flatRateBox}
+        ${milestoneBox}
+      </div>
+      <div class="sc-actions">
+        <button class="btn-icon btn-edit" data-row="${v.row_index}" title="Edit">✎</button>
+        <button class="btn-icon btn-refresh" data-row="${v.row_index}" title="Refresh views">↻</button>
+        <button class="btn-icon btn-delete danger" data-row="${v.row_index}" title="Remove">✕</button>
+      </div>
+    </div>
   `;
 }
 
