@@ -218,7 +218,7 @@ function daysLeft(iso) {
   if (!iso) return null;
   const today   = new Date(); today.setHours(0,0,0,0);
   const release = new Date(iso); release.setHours(0,0,0,0);
-  const elapsed = Math.floor((today - release) / 86_400_000);
+  const elapsed = Math.max(0, Math.floor((today - release) / 86_400_000));
   return Math.max(0, 30 - elapsed);
 }
 
