@@ -190,6 +190,14 @@ async def refresh_sponsor(body: RefreshBody):
     df.at[idx, "views"] = str(data["view_count"])
     df.at[idx, "thumbnail_url"] = data["thumbnail_url"]
     df.at[idx, "last_updated"] = date.today().isoformat()
+
+    stored_release = parse_date_safe(df.at[idx, "video release date"])
+    if stored_release and stored_release > date.today():
+        new_release = parse_date_safe(data["published_at"])
+        if new_release:
+            df.at[idx, "video release date"] = data["published_at"]
+            df.at[idx, "Milestones End date"] = (new_release + timedelta(days=30)).strftime("%d/%m/%Y")
+
     write_sponsors(df)
 
     return _row_to_out(df.iloc[idx].to_dict(), idx)
@@ -224,6 +232,13 @@ async def auto_refresh():
             df.at[i, "views"] = str(data["view_count"])
             df.at[i, "thumbnail_url"] = data["thumbnail_url"]
             df.at[i, "last_updated"] = today.isoformat()
+
+            if release > today:
+                new_release = parse_date_safe(data["published_at"])
+                if new_release:
+                    df.at[i, "video release date"] = data["published_at"]
+                    df.at[i, "Milestones End date"] = (new_release + timedelta(days=30)).strftime("%d/%m/%Y")
+
             refreshed.append(video_id)
         except Exception as e:
             errors.append({"video_id": video_id, "error": str(e)})
