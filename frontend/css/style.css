@@ -1385,3 +1385,58 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
 }
 
 .settings-actions { padding-top: 4px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Free Stuff tracker
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Plain-text cells (no .cell-inner span) need their own padding */
+#fs-table-wrap table.sheet-table td {
+  padding: 8px 14px;
+}
+
+#fs-table-wrap table.sheet-table th:first-child,
+#fs-table-wrap table.sheet-table td:first-child {
+  min-width: 96px;
+  padding-right: 18px;
+}
+
+.fs-badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+  background: var(--income-bg, #eef6ff);
+  color: var(--accent, #2563eb);
+  border: 1px solid var(--income-border, #dbeafe);
+  white-space: nowrap;
+}
+
+/* Truncate long spec text but keep it readable; full text on hover (title attr) */
+.sheet-table td.fs-specs {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Modal form fields for the Free Stuff add/edit dialog */
+#fs-modal-overlay .modal-body input[type="text"],
+#fs-modal-overlay .modal-body input[type="number"],
+#fs-modal-overlay .modal-body textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+  box-sizing: border-box;
+}
+
+#fs-modal-overlay .modal-body input:focus,
+#fs-modal-overlay .modal-body textarea:focus { border-color: var(--accent); }
+
+#fs-modal-overlay .modal-body textarea { resize: vertical; min-height: 38px; }

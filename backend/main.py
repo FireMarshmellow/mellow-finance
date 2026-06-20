@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from config import SHEET_MAP, SHEET_META
 from routers import data, summary
-from routers import sponsors, settings as settings_router
+from routers import sponsors, freebies, settings as settings_router
 from services.loader import load_sheet
 
 app = FastAPI(title="Mellow Labs Finance", version="1.0.0")
@@ -21,6 +21,7 @@ app.add_middleware(
 app.include_router(summary.router)
 app.include_router(data.router)
 app.include_router(sponsors.router)
+app.include_router(freebies.router)
 app.include_router(settings_router.router)
 
 

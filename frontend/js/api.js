@@ -46,6 +46,13 @@ export const api = {
   sponsorRefresh:     (idx)        => _req("POST",   "/api/sponsors/refresh", { row_index: idx }),
   sponsorAutoRefresh: ()           => _req("POST",   "/api/sponsors/auto-refresh"),
 
+  // Freebies (free items received)
+  freebieList:    ()           => _req("GET",    "/api/freebies/"),
+  freebieOptions: ()           => _req("GET",    "/api/freebies/options"),
+  freebieAdd:     (body)       => _req("POST",   "/api/freebies/", body),
+  freebieUpdate:  (idx, patch) => _req("PATCH",  `/api/freebies/${idx}`, patch),
+  freebieDelete:  (idx)        => _req("DELETE", `/api/freebies/${idx}`),
+
   // Settings
   getSettings:  ()      => _req("GET", "/api/settings/"),
   saveSettings: (body)  => _req("PUT", "/api/settings/", body),

@@ -3,6 +3,7 @@ import { renderYearly }        from "./pages/yearly.js";
 import { renderMonthly }       from "./pages/monthly.js";
 import { renderSheet }         from "./pages/sheet.js";
 import { renderSponsorTracker } from "./pages/sponsorTracker.js";
+import { renderFreebies }      from "./pages/freebies.js";
 import { renderSettings }      from "./pages/settings.js";
 
 const content = document.getElementById("page-content");
@@ -74,6 +75,8 @@ async function route() {
       await renderSheet(content, parts[1]);
     } else if (page === "sponsor-tracker") {
       await renderSponsorTracker(content);
+    } else if (page === "freebies") {
+      await renderFreebies(content);
     } else if (page === "settings") {
       await renderSettings(content);
     } else {
