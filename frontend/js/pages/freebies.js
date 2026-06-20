@@ -22,7 +22,7 @@ export async function renderFreebies(container) {
       api.freebieList(),
       api.freebieOptions(),
     ]);
-    _items      = sorted(items);
+    _items      = items;
     _providers  = opts.providers  || [];
     _categories = opts.categories || [];
   } catch (err) {
@@ -34,14 +34,56 @@ export async function renderFreebies(container) {
   wireEvents(container);
 }
 
-// ── sort: newest date first ────────────────────────────────────────────────────
+// ── sorting ─────────────────────────────────────────────────────────────────────
 
-function sorted(items) {
-  return [...items].sort((a, b) => {
-    const da = a.date_iso || "0000-00-00";
-    const db = b.date_iso || "0000-00-00";
-    return db.localeCompare(da);
+// Column definitions: key = data field, label = header text, type = compare mode.
+const COLS = [
+  { key: "date",     label: "Date",            type: "date" },
+  { key: "provider", label: "Provider",        type: "text" },
+  { key: "category", label: "Category",        type: "text" },
+  { key: "item",     label: "Item or Benefit", type: "text" },
+  { key: "specs",    label: "Quantity / Specs", type: "text" },
+  { key: "value",    label: "Value",           type: "num", align: "right" },
+];
+
+// Current sort: newest date first by default.
+let _sort = { key: "date", dir: "desc" };
+
+function colType(key) {
+  return COLS.find(c => c.key === key)?.type || "text";
+}
+
+function displayItems() {
+  const { key, dir } = _sort;
+  const type = colType(key);
+  const mul  = dir === "asc" ? 1 : -1;
+
+  return [..._items].sort((a, b) => {
+    let cmp;
+    if (type === "num") {
+      cmp = (a.value || 0) - (b.value || 0);
+    } else if (type === "date") {
+      cmp = (a.date_iso || "0000-00-00").localeCompare(b.date_iso || "0000-00-00");
+    } else {
+      cmp = String(a[key] || "").localeCompare(String(b[key] || ""), undefined, { sensitivity: "base" });
+    }
+    return cmp * mul;
   });
+}
+
+function setSort(key) {
+  if (_sort.key === key) {
+    _sort.dir = _sort.dir === "asc" ? "desc" : "asc";
+  } else {
+    // Dates and values feel natural starting high→low; text starts A→Z.
+    _sort = { key, dir: colType(key) === "text" ? "asc" : "desc" };
+  }
+  rerenderTable();
+}
+
+function sortArrow(key) {
+  if (_sort.key !== key) return `<span class="fs-sort-arrow">↕</span>`;
+  return `<span class="fs-sort-arrow active">${_sort.dir === "asc" ? "↑" : "↓"}</span>`;
 }
 
 // Format "2026-04-13" → "13 Apr 2026"
@@ -111,7 +153,7 @@ function renderTable() {
     return `<div class="empty-state" style="padding:40px 0">No items yet. Click “＋ Add Item” to log something you received for free.</div>`;
   }
 
-  const rows = _items.map(it => `
+  const rows = displayItems().map(it => `
     <tr data-row="${it.row_index}">
       <td style="white-space:nowrap">${esc(fmtDate(it.date_iso)) || esc(it.date) || "—"}</td>
       <td>${esc(it.provider) || "—"}</td>
@@ -129,12 +171,11 @@ function renderTable() {
     <table class="sheet-table">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Provider</th>
-          <th>Category</th>
-          <th>Item or Benefit</th>
-          <th>Quantity / Specs</th>
-          <th style="text-align:right">Value</th>
+          ${COLS.map(c => `
+            <th class="fs-sortable${_sort.key === c.key ? " sorted" : ""}" data-sort="${c.key}"
+                style="cursor:pointer;${c.align === "right" ? "text-align:right" : ""}">
+              ${esc(c.label)} ${sortArrow(c.key)}
+            </th>`).join("")}
           <th class="col-actions"></th>
         </tr>
       </thead>
@@ -255,6 +296,9 @@ function wireEvents(container) {
 
 function wireTableEvents(wrap) {
   if (!wrap) return;
+  wrap.querySelectorAll("th.fs-sortable").forEach(th =>
+    th.addEventListener("click", () => setSort(th.dataset.sort))
+  );
   wrap.querySelectorAll(".fs-edit").forEach(btn =>
     btn.addEventListener("click", e => openModal(parseInt(e.currentTarget.dataset.row, 10)))
   );
@@ -344,7 +388,6 @@ async function handleSave() {
       const i = _items.findIndex(it => it.row_index === _editingRow);
       if (i !== -1) _items[i] = saved;
     }
-    _items = sorted(_items);
     learnOption(_providers, saved.provider);
     learnOption(_categories, saved.category);
     refreshDatalists();
@@ -376,7 +419,7 @@ async function handleDelete(e) {
   try {
     await api.freebieDelete(row);
     // Row indices shift after a delete — reload from server to stay in sync.
-    _items = sorted(await api.freebieList());
+    _items = await api.freebieList();
     rerenderTable();
     toast("Item removed");
   } catch (err) {

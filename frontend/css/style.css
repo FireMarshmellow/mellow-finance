@@ -1401,6 +1401,18 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
   padding-right: 18px;
 }
 
+/* Sortable column headers */
+#fs-table-wrap th.fs-sortable:hover { background: #334155; }
+#fs-table-wrap th.fs-sortable.sorted { color: #fff; }
+
+.fs-sort-arrow {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: .4;
+}
+.fs-sort-arrow.active { opacity: 1; color: #93c5fd; }
+
 .fs-badge {
   display: inline-block;
   font-size: 11px;
