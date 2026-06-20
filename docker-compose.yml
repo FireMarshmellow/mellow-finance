@@ -1,12 +1,11 @@
 services:
   mellow-finance:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/mellow-finance:latest
+    build: .
     container_name: mellow-finance
     ports:
       - "8000:8000"
     volumes:
-      # Replace the left side with the path to your CSV folder on the NAS
-      - /path/to/your/data:/data
+      - ./data:/data
     environment:
       - DATA_DIR=/data
     restart: unless-stopped
