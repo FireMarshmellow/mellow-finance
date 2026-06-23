@@ -1672,3 +1672,131 @@ a.btn-icon { text-decoration: none; }
   /* Actions are always visible on touch devices */
   .stmt-group-actions { opacity: 1; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Financial Years — accountant view (tabs + per-FY pack)
+   ═══════════════════════════════════════════════════════════════ */
+.fy-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.fy-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: background .12s, color .12s;
+}
+.fy-tab:hover { background: #f1f5f9; color: var(--text); }
+.fy-tab.active {
+  background: var(--card-bg);
+  border-color: var(--border);
+  border-bottom-color: var(--card-bg);
+  color: var(--text);
+}
+.fy-tab-ongoing {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 10px;
+  padding: 1px 7px;
+}
+
+/* Per-FY header */
+.fy-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.fy-head-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+.fy-head-range { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.fy-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-radius: 12px;
+  padding: 3px 10px;
+}
+.fy-badge.ongoing  { color: #fff; background: var(--accent); }
+.fy-badge.complete { color: var(--text-muted); background: rgba(148,163,184,.22); }
+
+/* Income/expense breakdown */
+table.summary.fy-breakdown { white-space: normal; }
+.fy-breakdown td { border-bottom: 1px solid var(--border); }
+.fy-breakdown td.fy-num { text-align: right; font-variant-numeric: tabular-nums; min-width: 120px; }
+.fy-breakdown td.fy-indent:first-child { padding-left: 32px; font-weight: 500; color: var(--text-muted); }
+.fy-breakdown tr.fy-section td {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: .6px;
+  color: var(--text-faint);
+  background: #f8fafc;
+}
+.fy-breakdown tr.fy-subtotal td { font-weight: 700; }
+.fy-breakdown tr.fy-net td {
+  font-weight: 800;
+  font-size: 14px;
+  border-top: 2px solid var(--border);
+  background: #f8fafc;
+}
+.fy-breakdown tr:hover { background: transparent; }
+
+/* Bank statements inside an FY pack (read-only) */
+.fy-stmt-wrap { padding: 8px 0; }
+.fy-stmt-account { border-bottom: 1px solid var(--border); padding: 6px 0 10px; }
+.fy-stmt-account:last-child { border-bottom: none; }
+.fy-stmt-account-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 14px;
+}
+.fy-stmt-year-label {
+  padding: 6px 16px 4px 28px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.fy-stmt-row { padding-left: 36px; }
+
+/* Print: hand a single FY to the accountant */
+@media print {
+  .sidebar, .sidebar-overlay, .mobile-topbar,
+  .no-print, .fy-tabs { display: none !important; }
+  .main { margin: 0 !important; }
+  .page-content { padding: 0 !important; }
+  .table-card, .stat-card, .chart-card { box-shadow: none !important; break-inside: avoid; }
+  .fy-stmt-account, .fy-stmt-year, tr { break-inside: avoid; }
+  body { background: #fff !important; }
+}
