@@ -779,7 +779,7 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
 
 /* ── Mobile breakpoint ───────────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  body { flex-direction: column; }
+  body { flex-direction: column; overflow-x: hidden; }
 
   .sidebar {
     transform: translateX(-100%);
@@ -1212,10 +1212,15 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
   box-shadow: 0 20px 60px rgba(0,0,0,.18);
   width: 100%;
   max-width: 440px;
+  max-height: calc(100dvh - 40px);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   animation: modal-in .15s ease;
 }
+
+/* Body scrolls so the header/footer (incl. Save) stay reachable on short screens */
+.modal-body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
 @keyframes modal-in {
   from { transform: translateY(12px); opacity: 0; }
@@ -1258,6 +1263,19 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
 .modal-close:hover { background: #f1f5f9; }
 
 .modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+
+.modal-message { font-size: 14px; color: var(--text); margin: 0; line-height: 1.5; }
+.modal-input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+  width: 100%;
+}
+.modal-input:focus { border-color: var(--accent); }
 
 .modal-field { display: flex; flex-direction: column; gap: 5px; }
 
@@ -1452,3 +1470,205 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
 #fs-modal-overlay .modal-body textarea:focus { border-color: var(--accent); }
 
 #fs-modal-overlay .modal-body textarea { resize: vertical; min-height: 38px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Mobile refinements
+   Placed at end of file so these override the base rules above
+   (equal-specificity rules need to come last to win).
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+  /* Prevent iOS auto-zoom on focus — any field < 16px triggers it */
+  input, select, textarea,
+  .range-bar input[type="text"],
+  .sponsor-add-bar input[type="text"],
+  .modal-sponsor-row select,
+  .modal-sponsor-row input,
+  #modal-release-date,
+  #fs-modal-overlay .modal-body input[type="text"],
+  #fs-modal-overlay .modal-body input[type="number"],
+  #fs-modal-overlay .modal-body textarea,
+  table.sheet-table td input.cell-input {
+    font-size: 16px;
+  }
+
+  /* Comfortable tap targets */
+  .btn { padding: 10px 16px; font-size: 14px; }
+  .nav-item { padding: 12px 20px; }
+  .btn-icon { width: 38px; height: 38px; }
+  .modal-close { width: 36px; height: 36px; }
+  .modal-title { max-width: calc(100vw - 80px); }
+
+  /* Two stat cards per row on phones */
+  .stat-grid,
+  .stat-grid-3 { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+
+  /* Denser, touch-scrollable data tables */
+  .table-scroll { -webkit-overflow-scrolling: touch; max-height: none; }
+  table.summary,
+  table.sheet-table,
+  table.txn-table { font-size: 12px; }
+  table.summary thead th,
+  table.summary td { padding: 8px 10px; }
+  #fs-table-wrap table.sheet-table td { padding: 8px 10px; }
+  #fs-table-wrap table.sheet-table th:first-child,
+  #fs-table-wrap table.sheet-table td:first-child { min-width: 80px; padding-right: 12px; }
+  .sheet-table td.fs-specs { max-width: 150px; }
+
+  /* Range bar fills the row */
+  .range-bar { width: 100%; }
+  .range-bar input[type="text"] { flex: 1; min-width: 0; width: auto; }
+
+  /* Page-header action button drops to its own full-width row (Bank Statements) */
+  .page-header > .btn { width: 100%; justify-content: center; }
+}
+
+/* Extra-small phones: single-column stats so big values never clip */
+@media (max-width: 430px) {
+  .stat-grid,
+  .stat-grid-3 { grid-template-columns: 1fr; }
+  .page-content { padding: 14px 12px; }
+  .page-title { font-size: 17px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Bank Statements
+   ═══════════════════════════════════════════════════════════════ */
+
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* Upload dropzone (compact, sits inside each expanded account) */
+.stmt-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  padding: 16px 20px;
+  margin: 12px 16px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.stmt-dropzone:hover,
+.stmt-dropzone.dragover {
+  border-color: var(--accent);
+  background: #f0f9ff;
+}
+.stmt-dropzone.uploading { opacity: .6; pointer-events: none; }
+.stmt-dropzone-text { font-size: 13px; }
+.stmt-dropzone-text strong { color: var(--accent); }
+.stmt-dropzone-hint { font-size: 11px; color: var(--text-faint); }
+
+a.btn-icon { text-decoration: none; }
+
+/* Collapsible Account → Year → statements tree */
+.stmt-group { border-bottom: 1px solid var(--border); }
+.stmt-tree > .stmt-group:last-child { border-bottom: none; }
+
+.stmt-group-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  text-align: left;
+  transition: background .12s;
+}
+.stmt-group-head:hover { background: #f1f5f9; }
+
+.stmt-caret {
+  font-size: 11px;
+  color: var(--text-faint);
+  transition: transform .15s;
+  flex-shrink: 0;
+}
+.stmt-group.open > .stmt-group-head .stmt-caret { transform: rotate(90deg); }
+
+.stmt-group-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stmt-group-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: rgba(148, 163, 184, .2);
+  border-radius: 10px;
+  padding: 1px 8px;
+  min-width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Per-account action buttons in the header — reveal on hover */
+.stmt-group-actions {
+  display: inline-flex;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity .12s;
+}
+.stmt-account > .stmt-group-head:hover .stmt-group-actions,
+.stmt-group-actions:focus-within { opacity: 1; }
+
+/* Account level: bold, tinted background */
+.stmt-account > .stmt-group-head {
+  font-weight: 700;
+  background: #f8fafc;
+}
+.stmt-account > .stmt-group-head:hover { background: #eef2f7; }
+
+/* Year level: indented, lighter */
+.stmt-year > .stmt-group-head {
+  padding-left: 40px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.stmt-year { border-bottom: none; }
+.stmt-account > .stmt-group-body > .stmt-year + .stmt-year > .stmt-group-head {
+  border-top: 1px solid var(--border);
+}
+
+/* Statement rows */
+.stmt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px 9px 60px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.stmt-row:hover { background: #eff6ff; }
+
+.stmt-row-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stmt-row-name:hover { color: var(--accent); text-decoration: underline; }
+
+.stmt-row-size   { color: var(--text-faint); white-space: nowrap; min-width: 54px; text-align: right; }
+.stmt-row-actions { display: inline-flex; gap: 4px; flex-shrink: 0; }
+
+@media (max-width: 767px) {
+  .stmt-dropzone { margin: 10px 12px; padding: 14px; }
+  .stmt-year > .stmt-group-head { padding-left: 30px; }
+  .stmt-row {
+    flex-wrap: wrap;
+    padding: 9px 12px 9px 40px;
+    gap: 4px 10px;
+  }
+  .stmt-row-name { flex-basis: 100%; white-space: normal; word-break: break-word; }
+  .stmt-row-size { margin-left: auto; }
+  /* Actions are always visible on touch devices */
+  .stmt-group-actions { opacity: 1; }
+}

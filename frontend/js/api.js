@@ -53,6 +53,26 @@ export const api = {
   freebieUpdate:  (idx, patch) => _req("PATCH",  `/api/freebies/${idx}`, patch),
   freebieDelete:  (idx)        => _req("DELETE", `/api/freebies/${idx}`),
 
+  // Bank statements
+  stmtAccounts:       ()           => _req("GET",    "/api/statements/accounts"),
+  stmtAccountAdd:     (name)       => _req("POST",   "/api/statements/accounts", { name }),
+  stmtAccountRename:  (id, name)   => _req("PATCH",  `/api/statements/accounts/${id}`, { name }),
+  stmtAccountDelete:  (id)         => _req("DELETE", `/api/statements/accounts/${id}`),
+  stmtFiles:          (id)         => _req("GET",    `/api/statements/accounts/${id}/files`),
+  stmtFileDelete:     (id, name)   => _req("DELETE", `/api/statements/accounts/${id}/files/${encodeURIComponent(name)}`),
+  stmtFileUrl:        (id, name, download = false) =>
+    `/api/statements/accounts/${id}/files/${encodeURIComponent(name)}${download ? "?download=true" : ""}`,
+  stmtUpload: async (id, fileList) => {
+    const fd = new FormData();
+    for (const f of fileList) fd.append("files", f);
+    const res = await fetch(`/api/statements/accounts/${id}/files`, { method: "POST", body: fd });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`POST upload → ${res.status}: ${text}`);
+    }
+    return res.json();
+  },
+
   // Settings
   getSettings:  ()      => _req("GET", "/api/settings/"),
   saveSettings: (body)  => _req("PUT", "/api/settings/", body),

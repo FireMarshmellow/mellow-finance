@@ -33,6 +33,8 @@ SHEET_META = {
 SPONSOR_CSV   = DATA_DIR / "Sponsor Tracker - Sponserd videos.csv"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 
+STATEMENTS_DIR = DATA_DIR / "bank_statements"
+
 FREEBIES_CSV  = DATA_DIR / "Free stuff.csv"
 # Seed data bundled with the repo — copied into DATA_DIR on first run if the
 # canonical file is missing.
