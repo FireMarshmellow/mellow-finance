@@ -1719,6 +1719,53 @@ a.btn-icon { text-decoration: none; }
   padding: 1px 7px;
 }
 
+/* Hide / restore controls on a tab */
+.fy-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 1px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .12s, background .12s, color .12s;
+}
+.fy-tab:hover .fy-tab-icon,
+.fy-tab.active .fy-tab-icon { opacity: 1; }
+.fy-tab-hide:hover { background: #fee2e2; color: #ef4444; }
+.fy-tab-restore { opacity: 1; }
+.fy-tab-restore:hover { background: #dcfce7; color: #16a34a; }
+
+.fy-tab-muted {
+  color: var(--text-faint);
+  border-style: dashed;
+  border-color: var(--border);
+}
+.fy-tab-muted span { opacity: .75; }
+
+.fy-hidden-toggle {
+  align-self: center;
+  margin-left: 6px;
+  padding: 5px 11px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.fy-hidden-toggle:hover { background: #f1f5f9; color: var(--text); }
+
 /* Per-FY header */
 .fy-head {
   display: flex;

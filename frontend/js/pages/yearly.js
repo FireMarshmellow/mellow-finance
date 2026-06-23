@@ -8,7 +8,7 @@
  * (grouped by account → calendar year). Use the Print button to hand it over.
  */
 import { api }                 from "../api.js";
-import { gbp, showLoading }    from "../app.js";
+import { gbp, showLoading, toast } from "../app.js";
 import {
   buildIncomeExpenseBar,
   buildNetTrend,
@@ -34,6 +34,8 @@ let _freebies        = [];     // in-kind contributions
 let _accounts        = [];     // statement accounts
 let _filesByAccount  = {};     // accountId → files[]
 let _fyList          = [];     // FY labels, newest first
+let _hidden          = new Set(); // FY labels hidden from the report
+let _showHidden      = false;  // reveal hidden tabs for restoring
 let _activeTab       = null;   // "overview" or an FY label
 
 // ── helpers ─────────────────────────────────────────────────────────────────────
@@ -433,19 +435,62 @@ function renderFYView(label) {
 
 // ── tabs + paint ─────────────────────────────────────────────────────────────────
 
+function visibleFYs() {
+  return _fyList.filter(fy => !_hidden.has(fy));
+}
+
 function renderTabs() {
   const cur = currentFY();
   const tabs = [
-    `<button class="fy-tab ${_activeTab === "overview" ? "active" : ""}" data-tab="overview">Overview</button>`,
+    `<div class="fy-tab ${_activeTab === "overview" ? "active" : ""}" data-tab="overview" role="button" tabindex="0">Overview</div>`,
   ];
-  for (const fy of _fyList) {
+  for (const fy of visibleFYs()) {
     const ongoing = fy === cur;
     tabs.push(`
-      <button class="fy-tab ${_activeTab === fy ? "active" : ""}" data-tab="${fy}">
-        FY ${fy}${ongoing ? `<span class="fy-tab-ongoing">Ongoing</span>` : ""}
-      </button>`);
+      <div class="fy-tab ${_activeTab === fy ? "active" : ""}" data-tab="${fy}" role="button" tabindex="0">
+        <span>FY ${fy}</span>
+        ${ongoing ? `<span class="fy-tab-ongoing">Ongoing</span>` : ""}
+        <button class="fy-tab-icon fy-tab-hide" data-fy="${fy}" title="Hide this year from the report">✕</button>
+      </div>`);
+  }
+
+  if (_hidden.size) {
+    tabs.push(`<button class="fy-hidden-toggle" id="fy-toggle-hidden">${_showHidden ? "Done" : `${_hidden.size} hidden`}</button>`);
+    if (_showHidden) {
+      const hiddenSorted = [..._hidden].sort((a, b) => +b.split("/")[0] - +a.split("/")[0]);
+      for (const fy of hiddenSorted) {
+        tabs.push(`
+          <div class="fy-tab fy-tab-muted ${_activeTab === fy ? "active" : ""}" data-tab="${fy}" role="button" tabindex="0">
+            <span>FY ${fy}</span>
+            <button class="fy-tab-icon fy-tab-restore" data-fy="${fy}" title="Restore this year">↩</button>
+          </div>`);
+      }
+    }
   }
   return `<div class="fy-tabs no-print">${tabs.join("")}</div>`;
+}
+
+async function persistHidden() {
+  try { await api.saveHiddenYears([..._hidden]); }
+  catch (err) { toast(`Couldn't save: ${err.message}`, "error"); }
+}
+
+function hideYear(fy) {
+  _hidden.add(fy);
+  if (_activeTab === fy) {
+    const vis = visibleFYs();
+    _activeTab = vis.find(fyHasData) || vis[0] || "overview";
+  }
+  persistHidden();
+  paint();
+  toast(`FY ${fy} hidden`);
+}
+
+function restoreYear(fy) {
+  _hidden.delete(fy);
+  if (!_hidden.size) _showHidden = false;
+  persistHidden();
+  paint();
 }
 
 function renderActive() {
@@ -466,6 +511,13 @@ function paint() {
   _container.querySelectorAll(".fy-tab").forEach(t =>
     t.addEventListener("click", () => { _activeTab = t.dataset.tab; paint(); })
   );
+  _container.querySelectorAll(".fy-tab-hide").forEach(b =>
+    b.addEventListener("click", e => { e.stopPropagation(); hideYear(b.dataset.fy); })
+  );
+  _container.querySelectorAll(".fy-tab-restore").forEach(b =>
+    b.addEventListener("click", e => { e.stopPropagation(); restoreYear(b.dataset.fy); })
+  );
+  document.getElementById("fy-toggle-hidden")?.addEventListener("click", () => { _showHidden = !_showHidden; paint(); });
   document.getElementById("fy-print")?.addEventListener("click", () => window.print());
 
   if (_activeTab === "overview") buildOverviewCharts();
@@ -477,12 +529,13 @@ export async function renderYearly(container) {
   _container = container;
   showLoading();
 
-  let summary;
+  let summary, hiddenRes;
   try {
-    [summary, _freebies, _accounts] = await Promise.all([
+    [summary, _freebies, _accounts, hiddenRes] = await Promise.all([
       api.yearlySummary(),
       api.freebieList().catch(() => []),
       api.stmtAccounts().catch(() => []),
+      api.hiddenYears().catch(() => ({ hidden: [] })),
     ]);
   } catch (err) {
     container.innerHTML = `<div class="error-banner">⚠ ${err.message}</div>`;
@@ -491,6 +544,7 @@ export async function renderYearly(container) {
   _rows     = summary.rows || [];
   _freebies = _freebies || [];
   _accounts = _accounts || [];
+  _hidden   = new Set(hiddenRes.hidden || []);
 
   const entries = await Promise.all(_accounts.map(async a => {
     try { return [a.id, await api.stmtFiles(a.id)]; }
@@ -500,11 +554,12 @@ export async function renderYearly(container) {
 
   _fyList = buildFYList();
   if (!_activeTab || (_activeTab !== "overview" && !_fyList.includes(_activeTab))) {
-    // Prefer the ongoing year, but if it has nothing yet land on the most
-    // recent year that actually has data so the page opens on something useful.
-    _activeTab = fyHasData(currentFY())
+    // Prefer the ongoing year, but if it's hidden or has nothing yet, land on
+    // the most recent visible year with data so the page opens on something useful.
+    const vis = visibleFYs();
+    _activeTab = (!_hidden.has(currentFY()) && fyHasData(currentFY()))
       ? currentFY()
-      : (_fyList.find(fyHasData) || currentFY());
+      : (vis.find(fyHasData) || vis[0] || "overview");
   }
 
   paint();

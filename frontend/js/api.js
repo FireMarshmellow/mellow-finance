@@ -76,4 +76,6 @@ export const api = {
   // Settings
   getSettings:  ()      => _req("GET", "/api/settings/"),
   saveSettings: (body)  => _req("PUT", "/api/settings/", body),
+  hiddenYears:     ()        => _req("GET", "/api/settings/hidden-years"),
+  saveHiddenYears: (hidden)  => _req("PUT", "/api/settings/hidden-years", { hidden }),
 };
