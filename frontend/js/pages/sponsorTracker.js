@@ -28,14 +28,93 @@ export async function renderSponsorTracker(container) {
   wireEvents(container);
 }
 
-// ── sort: active first, then newest release date ──────────────────────────────
+// ── sorting ───────────────────────────────────────────────────────────────────
+// These are cards rather than a table, so the column headers other pages sort by
+// become a row of chips — same three-state cycle, same arrows.
 
+const SORT_COLS = [
+  { key: "date",    label: "Release Date", type: "date" },
+  { key: "title",   label: "Title",        type: "text" },
+  { key: "sponsor", label: "Sponsor",      type: "text" },
+  { key: "views",   label: "Views",        type: "num"  },
+  { key: "payout",  label: "Milestone",    type: "num"  },
+  { key: "status",  label: "Status",       type: "num"  },
+];
+
+// null = the default order: active tracking first, then newest release date.
+let _sort = null;
+
+function sortValue(v, key) {
+  switch (key) {
+    case "date":    return v.release_date_iso || "";
+    case "title":   return String(v.title   || "").toLowerCase();
+    case "sponsor": return String(v.sponsor || "").toLowerCase();
+    case "views":   return Number(v.views) || 0;
+    case "payout":  return v.milestone_payout || 0;
+    case "status":  return v.tracking_active ? 1 : 0;
+    default:        return "";
+  }
+}
+
+// Default order: active first, then newest release date.
 function sorted(videos) {
   return [...videos].sort((a, b) => {
     if (a.tracking_active !== b.tracking_active) return (b.tracking_active ? 1 : 0) - (a.tracking_active ? 1 : 0);
     const da = a.release_date_iso || "0000-00-00";
     const db = b.release_date_iso || "0000-00-00";
     return db.localeCompare(da);
+  });
+}
+
+function displayVideos() {
+  if (!_sort) return _videos;
+  const mul = _sort.dir === "asc" ? 1 : -1;
+  return [..._videos]
+    .map((v, i) => ({ v, i, k: sortValue(v, _sort.key) }))
+    .sort((a, b) => {
+      // Blanks sink to the bottom whichever way we're sorting.
+      if (a.k === "" && b.k === "") return a.i - b.i;
+      if (a.k === "") return 1;
+      if (b.k === "") return -1;
+      const c = typeof a.k === "string"
+        ? a.k.localeCompare(b.k, undefined, { sensitivity: "base", numeric: true })
+        : a.k - b.k;
+      return (c * mul) || (a.i - b.i);
+    })
+    .map(x => x.v);
+}
+
+function setSort(key) {
+  const type = SORT_COLS.find(c => c.key === key)?.type || "text";
+  const def  = type === "text" ? "asc" : "desc";
+  if (!_sort || _sort.key !== key)  _sort = { key, dir: def };
+  else if (_sort.dir === def)       _sort = { key, dir: def === "asc" ? "desc" : "asc" };
+  else                              _sort = null;   // third click → default order
+  rerenderList();
+  paintSortBar();
+}
+
+function renderSortBar() {
+  const chips = SORT_COLS.map(c => {
+    const on = _sort?.key === c.key;
+    return `
+      <button class="sort-chip${on ? " sorted" : ""}" data-sort="${c.key}">
+        ${esc(c.label)}
+        <span class="sort-arrow${on ? " active" : ""}">${on ? (_sort.dir === "asc" ? "↑" : "↓") : "↕"}</span>
+      </button>`;
+  }).join("");
+  return `<div class="sort-bar" id="sponsor-sort-bar"><span class="sort-bar-label">Sort by</span>${chips}</div>`;
+}
+
+function paintSortBar() {
+  const bar = document.getElementById("sponsor-sort-bar");
+  if (!bar) return;
+  bar.querySelectorAll(".sort-chip").forEach(chip => {
+    const on    = _sort?.key === chip.dataset.sort;
+    const arrow = chip.querySelector(".sort-arrow");
+    chip.classList.toggle("sorted", on);
+    arrow.classList.toggle("active", on);
+    arrow.textContent = on ? (_sort.dir === "asc" ? "↑" : "↓") : "↕";
   });
 }
 
@@ -80,6 +159,7 @@ function buildPage() {
     </div>
 
     <div class="table-card">
+      ${renderSortBar()}
       <div id="sponsor-list">
         ${renderList()}
       </div>
@@ -95,7 +175,7 @@ function renderList() {
   if (!_videos.length) {
     return `<div class="empty-state" style="padding:40px 0">No videos tracked yet. Paste a YouTube URL above to get started.</div>`;
   }
-  return `<div class="sponsor-list-cards">${_videos.map(renderRow).join("")}</div>`;
+  return `<div class="sponsor-list-cards">${displayVideos().map(renderRow).join("")}</div>`;
 }
 
 function renderRow(v) {
@@ -274,6 +354,10 @@ function wireEvents(container) {
 
   addBtn.addEventListener("click",    () => handleAdd(urlInput));
   urlInput.addEventListener("keydown", e => { if (e.key === "Enter") handleAdd(urlInput); });
+
+  container.querySelectorAll("#sponsor-sort-bar .sort-chip").forEach(chip =>
+    chip.addEventListener("click", () => setSort(chip.dataset.sort))
+  );
 
   wireListEvents(container.querySelector("#sponsor-list"));
   wireModal(container);

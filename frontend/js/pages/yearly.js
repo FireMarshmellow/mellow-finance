@@ -9,6 +9,7 @@
  */
 import { api }                 from "../api.js";
 import { gbp, showLoading, toast } from "../app.js";
+import { makeSortable }         from "../tableSort.js";
 import {
   buildIncomeExpenseBar,
   buildNetTrend,
@@ -219,7 +220,7 @@ function statCards(rows) {
 }
 
 function summaryTable(rows) {
-  const headerCols = ALL_COLS.map(c => `<th>${c}</th>`).join("");
+  const headerCols = ALL_COLS.map(c => `<th data-type="num">${c}</th>`).join("");
   const bodyRows = rows.map(row => {
     const cells = ALL_COLS.map(col => {
       const v = row[col] ?? 0;
@@ -229,20 +230,22 @@ function summaryTable(rows) {
       else if (col === "Net")       cls = v >= 0 ? "net-pos" : "net-neg";
       else if (INCOME_SOURCES.includes(col))  cls = v > 0 ? "income-val" : "";
       else if (EXPENSE_SOURCES.includes(col)) cls = v > 0 ? "expense-val" : "";
-      return `<td class="${cls}">${v !== 0 ? gbp(v) : "—"}</td>`;
+      // Sort on the raw number: the cell shows "—" for zero and "£1,234.56" otherwise.
+      return `<td class="${cls}" data-sort-value="${v}">${v !== 0 ? gbp(v) : "—"}</td>`;
     }).join("");
-    return `<tr><td>${row.period}</td>${cells}</tr>`;
+    // "2023/24" sorts by its start year.
+    return `<tr><td data-sort-value="${row.period.split("/")[0]}">${row.period}</td>${cells}</tr>`;
   }).join("");
 
   return `
     <div class="table-card section-gap">
       <div class="table-card-header">
         <span class="table-card-title">Financial Year Summary</span>
-        <span style="font-size:11px;color:var(--text-faint)">UK FY: 6 Apr – 5 Apr</span>
+        <span style="font-size:11px;color:var(--text-faint)">UK FY: 6 Apr – 5 Apr · click a header to sort</span>
       </div>
       <div class="table-scroll">
-        <table class="summary">
-          <thead><tr><th>Period</th>${headerCols}</tr></thead>
+        <table class="summary" data-sortable data-sort-id="yearly-summary">
+          <thead><tr><th data-type="num">Period</th>${headerCols}</tr></thead>
           <tbody>${bodyRows}</tbody>
         </table>
       </div>
@@ -337,14 +340,14 @@ function fyInKindSection(items, total) {
   const body = items.length
     ? items.map(it => `
         <tr>
-          <td style="white-space:nowrap">${esc(fmtIso(it.date_iso)) || esc(it.date) || "—"}</td>
+          <td class="col-date" data-sort-value="${esc(it.date_iso)}">${esc(fmtIso(it.date_iso)) || esc(it.date) || "—"}</td>
           <td>${esc(it.provider) || "—"}</td>
           <td>${it.category ? `<span class="fs-badge">${esc(it.category)}</span>` : "—"}</td>
           <td>${esc(it.item) || "—"}</td>
           <td class="fs-specs" title="${esc(it.specs)}">${esc(it.specs) || "—"}</td>
-          <td class="fy-num">${gbp(it.value)}</td>
+          <td class="num" data-sort-value="${it.value ?? ""}">${gbp(it.value)}</td>
         </tr>`).join("")
-    : `<tr><td colspan="6"><div class="empty-state" style="padding:22px 0">No in-kind contributions recorded for this year.</div></td></tr>`;
+    : `<tr data-no-sort><td colspan="6"><div class="empty-state" style="padding:22px 0">No in-kind contributions recorded for this year.</div></td></tr>`;
   return `
     <div class="table-card section-gap">
       <div class="table-card-header">
@@ -352,11 +355,14 @@ function fyInKindSection(items, total) {
         <span style="font-size:12px;color:var(--text-muted)">${items.length} item${items.length !== 1 ? "s" : ""} · ${gbp(total)}</span>
       </div>
       <div class="table-scroll">
-        <table class="sheet-table">
+        <table class="sheet-table" data-sortable data-sort-id="fy-inkind">
           <thead><tr>
-            <th>Date</th><th>Provider</th><th>Category</th>
-            <th>Item or Benefit</th><th>Quantity / Specs</th>
-            <th style="text-align:right">Value</th>
+            <th data-type="date" class="col-date">Date</th>
+            <th data-type="text">Provider</th>
+            <th data-type="text">Category</th>
+            <th data-type="text">Item or Benefit</th>
+            <th data-type="text">Quantity / Specs</th>
+            <th data-type="num" class="num">Value</th>
           </tr></thead>
           <tbody>${body}</tbody>
         </table>
@@ -519,6 +525,8 @@ function paint() {
   );
   document.getElementById("fy-toggle-hidden")?.addEventListener("click", () => { _showHidden = !_showHidden; paint(); });
   document.getElementById("fy-print")?.addEventListener("click", () => window.print());
+
+  makeSortable(_container);
 
   if (_activeTab === "overview") buildOverviewCharts();
 }

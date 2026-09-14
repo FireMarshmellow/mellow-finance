@@ -10,6 +10,7 @@
  */
 import { api }  from "../api.js";
 import { showLoading, toast } from "../app.js";
+import { makeSortable } from "../tableSort.js";
 
 const SHEET_LABELS = {
   youtube_adsense: "YouTube AdSense",
@@ -51,21 +52,41 @@ function escHtml(s) {
 }
 
 // ── Table rendering ────────────────────────────────────────────────────────
+
+// Column sort mode: dates by name, otherwise numeric only when every filled
+// value in the column is a number (so "Amount" sorts 2 < 10, not "10" < "2").
+function colSortType(col, rows) {
+  if (isDateCol(col)) return "date";
+  let seen = 0;
+  for (const row of rows) {
+    const v = String(row[col] ?? "").trim();
+    if (!v) continue;
+    seen++;
+    if (!/^-?[£$€]?-?[\d,]*\.?\d+%?$/.test(v)) return "text";
+  }
+  return seen ? "num" : "text";
+}
+
 function renderTable(columns, rows, category) {
   const thead = `
     <thead>
       <tr>
-        <th style="width:44px;text-align:center">#</th>
-        ${columns.map(c => `<th>${escHtml(c)}<div class="col-resize-handle"></div></th>`).join("")}
-        <th class="col-actions">✕</th>
+        <th class="col-row-no" data-type="num" title="Source row number">#</th>
+        ${columns.map(c => {
+          const type = colSortType(c, rows);
+          return `<th data-type="${type}" class="${type === "num" ? "num" : ""}">${escHtml(c)}<div class="col-resize-handle"></div></th>`;
+        }).join("")}
+        <th class="col-actions" data-nosort>✕</th>
       </tr>
     </thead>`;
+
+  const types = Object.fromEntries(columns.map(c => [c, colSortType(c, rows)]));
 
   const tbody = rows.map((row, idx) => {
     const cells = columns.map(col => {
       const val = row[col] ?? "";
       return `
-        <td data-col="${escHtml(col)}" data-row="${idx}">
+        <td data-col="${escHtml(col)}" data-row="${idx}" class="${types[col] === "num" ? "num" : ""}">
           <span class="cell-inner">${escHtml(val)}</span>
           <input class="cell-input" type="text" value="${escHtml(val)}" data-original="${escHtml(val)}" />
         </td>`;
@@ -73,7 +94,7 @@ function renderTable(columns, rows, category) {
 
     return `
       <tr data-row="${idx}">
-        <td style="text-align:center;color:var(--text-faint);font-size:11px;padding:8px 6px">${idx + 1}</td>
+        <td class="col-row-no">${idx + 1}</td>
         ${cells}
         <td class="col-actions">
           <button class="btn-del" data-row="${idx}" title="Delete row">✕</button>
@@ -81,7 +102,7 @@ function renderTable(columns, rows, category) {
       </tr>`;
   }).join("");
 
-  return `<table class="sheet-table">${thead}<tbody>${tbody}</tbody></table>`;
+  return `<table class="sheet-table" data-sortable data-sort-id="sheet:${escHtml(_sheetId)}">${thead}<tbody>${tbody}</tbody></table>`;
 }
 
 // ── Full re-render ─────────────────────────────────────────────────────────
@@ -145,6 +166,12 @@ function wireResizeHandles(wrapper) {
 
       function onMouseUp() {
         handle.classList.remove("resizing");
+        // The click that follows this drag must not also re-sort the column.
+        const table = th.closest("table");
+        if (table) {
+          table.dataset.resizing = "1";
+          setTimeout(() => delete table.dataset.resizing, 0);
+        }
         document.removeEventListener("mousemove", onMouseMove);
         document.removeEventListener("mouseup", onMouseUp);
       }
@@ -158,6 +185,7 @@ function wireResizeHandles(wrapper) {
 // ── Event wiring ───────────────────────────────────────────────────────────
 function wireTable(wrapper, columns, rows) {
   wireResizeHandles(wrapper);
+  makeSortable(wrapper);
 
   // Attach flatpickr to date-column cell inputs
   wrapper.querySelectorAll("td[data-col]").forEach(td => {
@@ -252,7 +280,7 @@ async function addRow(columns) {
   if (document.getElementById(formId)) return;  // already open
 
   const fields = columns.map(col => `
-    <td>
+    <td style="padding:5px 8px">
       <input type="text" name="${escHtml(col)}"
              placeholder="${isDateCol(col) ? "DD/MM/YYYY" : escHtml(col)}"
              ${isDateCol(col) ? 'data-datepicker="true"' : ""}
@@ -262,11 +290,12 @@ async function addRow(columns) {
 
   const formRow = document.createElement("tr");
   formRow.id = formId;
-  formRow.style.background = "#f0fdf4";
+  formRow.className = "new-row";
+  formRow.setAttribute("data-no-sort", "");   // stays pinned to the top when sorting
   formRow.innerHTML = `
-    <td style="text-align:center;font-size:11px;color:var(--income);padding:8px 6px">NEW</td>
+    <td class="col-row-no" style="color:var(--income);font-weight:700">NEW</td>
     ${fields}
-    <td style="text-align:center;padding:4px 6px;">
+    <td class="col-actions" style="padding:5px 6px">
       <button id="btn-save-new" class="btn btn-primary" style="padding:5px 10px;font-size:12px">Save</button>
     </td>`;
 
@@ -322,7 +351,7 @@ export async function renderSheet(container, sheetId) {
     <div class="page-header">
       <div>
         <div class="page-title">${escHtml(label)}</div>
-        <div class="page-subtitle">Raw data — click any cell to edit, use Tab to move between cells</div>
+        <div class="page-subtitle">Raw data — click a cell to edit, Tab to move along, click a column header to sort</div>
       </div>
     </div>
 

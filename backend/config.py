@@ -4,7 +4,7 @@ from pathlib import Path
 DATA_DIR = Path(
     os.environ.get(
         "DATA_DIR",
-        r"C:\Users\Mellow_labs\Desktop\Mellow_labs_Financials_backup_29-04-26",
+        r"C:\Users\Mellow_labs\Documents\GitHub\Mellow_labs_Finance_data\Mellow_labs_Financials_backup_29-04-26",
     )
 )
 

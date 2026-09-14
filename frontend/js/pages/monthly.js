@@ -1,5 +1,6 @@
 import { api }  from "../api.js";
 import { gbp, showLoading, toast } from "../app.js";
+import { makeSortable } from "../tableSort.js";
 
 import {
   buildIncomeExpenseBar,
@@ -54,7 +55,7 @@ function statCards(rows) {
 }
 
 function summaryTable(rows) {
-  const headerCols = ALL_COLS.map(c => `<th>${c}</th>`).join("");
+  const headerCols = ALL_COLS.map(c => `<th data-type="num">${c}</th>`).join("");
 
   const bodyRows = rows.map(row => {
     const cells = ALL_COLS.map(col => {
@@ -65,7 +66,8 @@ function summaryTable(rows) {
       else if (col === "Net")            cls = v >= 0 ? "net-pos" : "net-neg";
       else if (INCOME_SOURCES.includes(col))  cls = v > 0 ? "income-val" : "";
       else if (EXPENSE_SOURCES.includes(col)) cls = v > 0 ? "expense-val" : "";
-      return `<td class="${cls}">${v !== 0 ? gbp(v) : "—"}</td>`;
+      // Sort on the raw number: the cell shows "—" for zero and "£1,234.56" otherwise.
+      return `<td class="${cls}" data-sort-value="${v}">${v !== 0 ? gbp(v) : "—"}</td>`;
     }).join("");
     return `<tr><td>${row.period}</td>${cells}</tr>`;
   }).join("");
@@ -74,11 +76,12 @@ function summaryTable(rows) {
     <div class="table-card">
       <div class="table-card-header">
         <span class="table-card-title">Monthly Breakdown</span>
+        <span style="font-size:11px;color:var(--text-faint)">Click a column header to sort</span>
       </div>
       <div class="table-scroll">
-        <table class="summary">
+        <table class="summary" data-sortable data-sort-id="monthly-summary">
           <thead>
-            <tr><th>Month</th>${headerCols}</tr>
+            <tr><th data-type="date">Month</th>${headerCols}</tr>
           </thead>
           <tbody>${bodyRows}</tbody>
         </table>
@@ -98,30 +101,30 @@ function transactionPanels(transactions) {
   const totalIncome  = income.reduce((s, t) => s + t.amount_gbp, 0);
   const totalExpense = expenses.reduce((s, t) => s + t.amount_gbp, 0);
 
-  const incomeRows = items => items.map(t => `
+  const txnRow = label => items => items.map(t => `
     <tr>
-      <td class="txn-date">${fmtDate(t.date)}</td>
-      <td class="txn-source">${t.source}</td>
-      <td class="txn-amount">${gbp(t.amount_gbp)}</td>
+      <td class="txn-date col-date" data-sort-value="${t.date}">${fmtDate(t.date)}</td>
+      <td class="txn-source">${label(t)}</td>
+      <td class="txn-amount num" data-sort-value="${t.amount_gbp}">${gbp(t.amount_gbp)}</td>
     </tr>`).join("");
 
-  const expenseRows = items => items.map(t => `
-    <tr>
-      <td class="txn-date">${fmtDate(t.date)}</td>
-      <td class="txn-source">${t.description || t.source}</td>
-      <td class="txn-amount">${gbp(t.amount_gbp)}</td>
-    </tr>`).join("");
+  const incomeRows  = txnRow(t => t.source);
+  const expenseRows = txnRow(t => t.description || t.source);
 
-  const panel = (title, items, total, cls, rowFn, col2) => `
+  const panel = (title, items, total, cls, rowFn, col2, sortId) => `
     <div class="txn-panel">
       <div class="txn-panel-header ${cls}">
         <span class="txn-panel-title">${title}</span>
         <span class="txn-panel-total">${gbp(total)}</span>
       </div>
       ${items.length ? `
-        <div class="table-scroll" style="max-height:420px">
-          <table class="txn-table">
-            <thead><tr><th>Date</th><th>${col2}</th><th>Amount</th></tr></thead>
+        <div class="table-scroll" style="max-height:min(56vh,560px)">
+          <table class="txn-table" data-sortable data-sort-id="txn-${sortId}">
+            <thead><tr>
+              <th data-type="date" class="col-date">Date</th>
+              <th data-type="text">${col2}</th>
+              <th data-type="num" class="num">Amount</th>
+            </tr></thead>
             <tbody>${rowFn(items)}</tbody>
           </table>
         </div>` : `<div class="empty-state" style="padding:24px">No transactions</div>`}
@@ -129,8 +132,8 @@ function transactionPanels(transactions) {
 
   return `
     <div class="txn-grid">
-      ${panel("Income",   income,   totalIncome,  "income",  incomeRows,  "Source")}
-      ${panel("Expenses", expenses, totalExpense, "expense", expenseRows, "Item")}
+      ${panel("Income",   income,   totalIncome,  "income",  incomeRows,  "Source", "income")}
+      ${panel("Expenses", expenses, totalExpense, "expense", expenseRows, "Item",   "expense")}
     </div>`;
 }
 
@@ -184,6 +187,9 @@ async function fetchAndRender(start, end) {
 
   tableEl.innerHTML = summaryTable(rows);
   txnEl.innerHTML   = transactionPanels(txnData.transactions);
+
+  makeSortable(tableEl);
+  makeSortable(txnEl);
 
   buildIncomeExpenseBar(document.getElementById("chart-bar"),     rows);
   buildNetTrend        (document.getElementById("chart-net"),     rows);

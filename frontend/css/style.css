@@ -29,6 +29,10 @@
   --net-bg-pos:     #ecfdf5;
   --net-bg-neg:     #fef2f2;
 
+  /* Widest the page content grows to before it centres in the viewport.
+     Roomy enough for the 12-column summary table on a 1080p+ monitor. */
+  --content-max: 1760px;
+
   --radius:    8px;
   --radius-lg: 12px;
   --shadow:    0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
@@ -68,8 +72,17 @@ body { display: flex; }
 
 .page-content {
   flex: 1;
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
   padding: 28px 32px;
-  max-width: 1400px;
+}
+
+/* Wide desktops: more breathing room and taller charts, rather than a
+   1400px column stranded in the middle of the screen. */
+@media (min-width: 1500px) {
+  .page-content { padding: 32px 44px; }
+  .chart-canvas-wrap { height: 300px; }
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
@@ -229,6 +242,12 @@ body { display: flex; }
   margin-bottom: 28px;
 }
 
+/* Hold charts to two per row — auto-fit would give four squashed panels on a
+   wide monitor. */
+@media (min-width: 1100px) {
+  .chart-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 .chart-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -279,56 +298,123 @@ body { display: flex; }
 }
 
 .table-scroll {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: 520px;
+  overflow: auto;
+  max-height: min(72vh, 900px);
 }
 
-table.summary {
+/* ── Data tables — shared chrome ─────────────────────────────────────────────
+   Summary, editable sheet and transaction tables all wear the same header,
+   zebra striping, hover, padding and sort affordances. The per-table blocks
+   below add only what is genuinely different (editable cells, total tinting). */
+
+table.summary,
+table.sheet-table,
+table.txn-table {
+  width: 100%;
   min-width: 100%;
   border-collapse: collapse;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
-table.summary thead {
+table.summary thead,
+table.sheet-table thead,
+table.txn-table thead {
   position: sticky;
   top: 0;
   z-index: 2;
 }
 
-table.summary thead th {
+table.summary thead th,
+table.sheet-table thead th,
+table.txn-table thead th {
   background: #1e293b;
   color: #cbd5e1;
   font-weight: 600;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .5px;
-  padding: 10px 16px;
-  text-align: right;
-}
-
-table.summary thead th:first-child {
+  padding: 10px 14px;
   text-align: left;
+  white-space: nowrap;
+  position: relative;
+  user-select: none;
 }
 
-table.summary tbody tr:nth-child(even) { background: #f8fafc; }
-table.summary tbody tr:hover { background: #eff6ff; }
+table.summary tbody tr,
+table.sheet-table tbody tr,
+table.txn-table tbody tr { transition: background .1s; }
 
-table.summary td {
-  padding: 9px 16px;
-  text-align: right;
+table.summary tbody tr:nth-child(even),
+table.sheet-table tbody tr:nth-child(even),
+table.txn-table tbody tr:nth-child(even) { background: #f8fafc; }
+
+table.summary tbody tr:hover,
+table.sheet-table tbody tr:hover,
+table.txn-table tbody tr:hover { background: #eff6ff; }
+
+table.summary td,
+table.sheet-table td,
+table.txn-table td {
+  padding: 9px 14px;
   border-bottom: 1px solid var(--border);
   color: var(--text);
+  vertical-align: middle;
 }
+
+/* Numbers right-align and never wrap, in every table */
+table.summary th.num,  table.summary td.num,
+table.sheet-table th.num, table.sheet-table td.num,
+table.txn-table th.num, table.txn-table td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Date columns stay on one line and keep a stable width */
+th.col-date, td.col-date { white-space: nowrap; min-width: 104px; }
+
+/* ── Sortable headers ────────────────────────────────────────────────────── */
+th.th-sort { cursor: pointer; }
+th.th-sort:hover { background: #334155; }
+th.th-sort.sorted { background: #27364d; color: #fff; }
+th.th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.sort-arrow {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: .35;
+}
+.sort-arrow.active { opacity: 1; color: #93c5fd; }
+
+/* ── Summary table specifics ─────────────────────────────────────────────── */
+table.summary { white-space: nowrap; }
+
+table.summary thead th { text-align: right; }
+table.summary thead th:first-child { text-align: left; }
+
+table.summary td { text-align: right; }
 
 table.summary td:first-child {
   text-align: left;
   font-weight: 600;
   color: var(--text);
-  min-width: 90px;
+  min-width: 96px;
 }
+
+/* Many-column summaries scroll sideways — pin the period label so a row stays
+   readable however far right you scroll. (Not the 2-column FY breakdown.) */
+table.summary:not(.fy-breakdown) th:first-child,
+table.summary:not(.fy-breakdown) td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--card-bg);
+  box-shadow: 1px 0 0 var(--border);
+}
+table.summary:not(.fy-breakdown) thead th:first-child { z-index: 3; background: #1e293b; }
+table.summary:not(.fy-breakdown) tbody tr:nth-child(even) td:first-child { background: #f8fafc; }
+table.summary:not(.fy-breakdown) tbody tr:hover td:first-child { background: #eff6ff; }
 
 table.summary td.income-val { color: var(--income); }
 table.summary td.expense-val { color: var(--expense); }
@@ -357,33 +443,6 @@ table.summary td.net-neg { font-weight: 700; color: var(--net-neg); background: 
 .badge.income { background: var(--income-bg); color: var(--income); border: 1px solid var(--income-border); }
 .badge.expense { background: var(--expense-bg); color: var(--expense); border: 1px solid var(--expense-border); }
 
-table.sheet-table {
-  min-width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-
-table.sheet-table thead {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
-table.sheet-table thead th {
-  background: #1e293b;
-  color: #cbd5e1;
-  font-weight: 600;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  padding: 9px 12px;
-  text-align: left;
-  position: relative;
-  user-select: none;
-  white-space: nowrap;
-}
-
 .col-resize-handle {
   position: absolute;
   right: 0;
@@ -399,26 +458,40 @@ table.sheet-table thead th {
   background: rgba(255, 255, 255, 0.35);
 }
 
-table.sheet-table thead th.col-actions {
-  width: 50px;
+/* Actions column: shrink to fit its buttons and keep them on one line, however
+   many there are (`width:1%` is the shrink-to-fit idiom for table cells). */
+table.summary th.col-actions,  table.summary td.col-actions,
+table.sheet-table th.col-actions, table.sheet-table td.col-actions,
+table.txn-table th.col-actions, table.txn-table td.col-actions {
+  width: 1%;
+  white-space: nowrap;
   text-align: center;
+  padding-left: 8px;
+  padding-right: 12px;
 }
 
-table.sheet-table tbody tr { transition: background .1s; }
-table.sheet-table tbody tr:nth-child(even) { background: #f8fafc; }
-table.sheet-table tbody tr:hover { background: #eff6ff; }
+.col-actions .btn-icon + .btn-icon { margin-left: 2px; }
+
+/* Source row number — narrow, muted, always the first column */
+table.sheet-table th.col-row-no { width: 52px; text-align: center; }
+table.sheet-table td.col-row-no {
+  width: 52px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 11px;
+  padding: 9px 6px;
+}
+
 table.sheet-table tbody tr.new-row { background: #f0fdf4 !important; }
 
-table.sheet-table td {
-  padding: 0;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
+/* Editable cells hand their padding to .cell-inner so the whole cell is a
+   click target; read-only sheet cells keep the shared padding. */
+table.sheet-table td[data-col] { padding: 0; }
 
 table.sheet-table td .cell-inner {
   display: block;
-  padding: 8px 12px;
-  min-height: 36px;
+  padding: 9px 14px;
+  min-height: 38px;
   cursor: text;
   white-space: normal;
   word-break: break-word;
@@ -430,23 +503,18 @@ table.sheet-table td.editing .cell-inner { display: none; }
 table.sheet-table td input.cell-input {
   display: none;
   width: 100%;
-  padding: 7px 12px;
+  padding: 8px 14px;
   border: none;
   border-bottom: 2px solid var(--accent);
   background: #f0f9ff;
   font-size: 13px;
   font-family: inherit;
   outline: none;
-  min-height: 36px;
+  min-height: 38px;
 }
 
 table.sheet-table td.editing input.cell-input { display: block; }
 table.sheet-table td.dirty { background: #fefce8 !important; }
-
-table.sheet-table td.col-actions {
-  text-align: center;
-  width: 50px;
-}
 
 .btn-del {
   background: none;
@@ -677,40 +745,9 @@ table.sheet-table td.col-actions {
 .txn-panel-header.income  .txn-panel-total { color: var(--income); }
 .txn-panel-header.expense .txn-panel-total { color: var(--expense); }
 
-table.txn-table {
-  min-width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-
-table.txn-table thead th {
-  background: #1e293b;
-  color: #cbd5e1;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  padding: 8px 14px;
-  text-align: left;
-  position: sticky;
-  top: 0;
-}
-
-table.txn-table thead th:last-child { text-align: right; }
-
-table.txn-table tbody tr:nth-child(even) { background: #f8fafc; }
-table.txn-table tbody tr:hover { background: #eff6ff; }
-
-table.txn-table td {
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text);
-}
-
-td.txn-date   { color: var(--text-muted); white-space: nowrap; }
+td.txn-date   { color: var(--text-muted); }
 td.txn-source { font-weight: 500; }
-td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
+td.txn-amount { font-weight: 600; }
 
 @media (max-width: 767px) {
   .txn-grid { grid-template-columns: 1fr; gap: 14px; }
@@ -917,6 +954,52 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
 }
 
 .sponsor-add-bar input[type="text"]:focus { border-color: var(--accent); }
+
+/* ── Sort bar ─────────────────────────────────────────────────────────────
+   Card lists can't have clickable column headers, so they get the same sort
+   controls as a row of buttons — same arrows, same three-state cycle. */
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+}
+
+.sort-bar-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+
+.sort-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card-bg);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.sort-chip:hover { background: #eff6ff; color: var(--text); }
+.sort-chip.sorted {
+  background: #1e293b;
+  border-color: #1e293b;
+  color: #fff;
+}
+.sort-chip .sort-arrow { margin-left: 1px; }
+.sort-chip.sorted .sort-arrow { opacity: 1; color: #93c5fd; }
 
 /* ── Sponsor list cards ──────────────────────────────────────────────────── */
 
@@ -1408,29 +1491,6 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
    Free Stuff tracker
    ═══════════════════════════════════════════════════════════════ */
 
-/* Plain-text cells (no .cell-inner span) need their own padding */
-#fs-table-wrap table.sheet-table td {
-  padding: 8px 14px;
-}
-
-#fs-table-wrap table.sheet-table th:first-child,
-#fs-table-wrap table.sheet-table td:first-child {
-  min-width: 96px;
-  padding-right: 18px;
-}
-
-/* Sortable column headers */
-#fs-table-wrap th.fs-sortable:hover { background: #334155; }
-#fs-table-wrap th.fs-sortable.sorted { color: #fff; }
-
-.fs-sort-arrow {
-  display: inline-block;
-  margin-left: 4px;
-  font-size: 10px;
-  opacity: .4;
-}
-.fs-sort-arrow.active { opacity: 1; color: #93c5fd; }
-
 .fs-badge {
   display: inline-block;
   font-size: 11px;
@@ -1507,11 +1567,12 @@ td.txn-amount { text-align: right; white-space: nowrap; font-weight: 600; }
   table.summary,
   table.sheet-table,
   table.txn-table { font-size: 12px; }
-  table.summary thead th,
-  table.summary td { padding: 8px 10px; }
-  #fs-table-wrap table.sheet-table td { padding: 8px 10px; }
-  #fs-table-wrap table.sheet-table th:first-child,
-  #fs-table-wrap table.sheet-table td:first-child { min-width: 80px; padding-right: 12px; }
+  table.summary thead th, table.summary td,
+  table.sheet-table thead th, table.sheet-table td,
+  table.txn-table thead th, table.txn-table td { padding: 8px 10px; }
+  table.sheet-table td[data-col] { padding: 0; }
+  table.sheet-table td .cell-inner { padding: 8px 10px; }
+  th.col-date, td.col-date { min-width: 84px; }
   .sheet-table td.fs-specs { max-width: 150px; }
 
   /* Range bar fills the row */
@@ -1795,8 +1856,14 @@ a.btn-icon { text-decoration: none; }
 .fy-badge.ongoing  { color: #fff; background: var(--accent); }
 .fy-badge.complete { color: var(--text-muted); background: rgba(148,163,184,.22); }
 
-/* Income/expense breakdown */
-table.summary.fy-breakdown { white-space: normal; }
+/* Income/expense breakdown — a two-column statement, so cap it rather than
+   stretching a label and its figure to opposite ends of a wide monitor. */
+table.summary.fy-breakdown {
+  white-space: normal;
+  width: 100%;
+  min-width: 0;
+  max-width: 760px;
+}
 .fy-breakdown td { border-bottom: 1px solid var(--border); }
 .fy-breakdown td.fy-num { text-align: right; font-variant-numeric: tabular-nums; min-width: 120px; }
 .fy-breakdown td.fy-indent:first-child { padding-left: 32px; font-weight: 500; color: var(--text-muted); }

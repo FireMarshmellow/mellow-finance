@@ -7,6 +7,7 @@
  */
 import { api }                    from "../api.js";
 import { showLoading, toast, gbp } from "../app.js";
+import { makeSortable }            from "../tableSort.js";
 
 let _items     = [];
 let _providers = [];
@@ -34,56 +35,22 @@ export async function renderFreebies(container) {
   wireEvents(container);
 }
 
-// ── sorting ─────────────────────────────────────────────────────────────────────
+// ── columns ─────────────────────────────────────────────────────────────────────
 
-// Column definitions: key = data field, label = header text, type = compare mode.
+// Sorting itself lives in tableSort.js, shared with every other table in the app.
 const COLS = [
-  { key: "date",     label: "Date",            type: "date" },
-  { key: "provider", label: "Provider",        type: "text" },
-  { key: "category", label: "Category",        type: "text" },
-  { key: "item",     label: "Item or Benefit", type: "text" },
+  { key: "date",     label: "Date",             type: "date", cls: "col-date" },
+  { key: "provider", label: "Provider",         type: "text" },
+  { key: "category", label: "Category",         type: "text" },
+  { key: "item",     label: "Item or Benefit",  type: "text" },
   { key: "specs",    label: "Quantity / Specs", type: "text" },
-  { key: "value",    label: "Value",           type: "num", align: "right" },
+  { key: "value",    label: "Value",            type: "num",  cls: "num" },
 ];
 
-// Current sort: newest date first by default.
-let _sort = { key: "date", dir: "desc" };
-
-function colType(key) {
-  return COLS.find(c => c.key === key)?.type || "text";
-}
-
+// Rendered newest-first; the third click on a header cycles back to this order.
 function displayItems() {
-  const { key, dir } = _sort;
-  const type = colType(key);
-  const mul  = dir === "asc" ? 1 : -1;
-
-  return [..._items].sort((a, b) => {
-    let cmp;
-    if (type === "num") {
-      cmp = (a.value || 0) - (b.value || 0);
-    } else if (type === "date") {
-      cmp = (a.date_iso || "0000-00-00").localeCompare(b.date_iso || "0000-00-00");
-    } else {
-      cmp = String(a[key] || "").localeCompare(String(b[key] || ""), undefined, { sensitivity: "base" });
-    }
-    return cmp * mul;
-  });
-}
-
-function setSort(key) {
-  if (_sort.key === key) {
-    _sort.dir = _sort.dir === "asc" ? "desc" : "asc";
-  } else {
-    // Dates and values feel natural starting high→low; text starts A→Z.
-    _sort = { key, dir: colType(key) === "text" ? "asc" : "desc" };
-  }
-  rerenderTable();
-}
-
-function sortArrow(key) {
-  if (_sort.key !== key) return `<span class="fs-sort-arrow">↕</span>`;
-  return `<span class="fs-sort-arrow active">${_sort.dir === "asc" ? "↑" : "↓"}</span>`;
+  return [..._items].sort((a, b) =>
+    (b.date_iso || "0000-00-00").localeCompare(a.date_iso || "0000-00-00"));
 }
 
 // Format "2026-04-13" → "13 Apr 2026"
@@ -155,28 +122,25 @@ function renderTable() {
 
   const rows = displayItems().map(it => `
     <tr data-row="${it.row_index}">
-      <td style="white-space:nowrap">${esc(fmtDate(it.date_iso)) || esc(it.date) || "—"}</td>
+      <td class="col-date" data-sort-value="${esc(it.date_iso)}">${esc(fmtDate(it.date_iso)) || esc(it.date) || "—"}</td>
       <td>${esc(it.provider) || "—"}</td>
       <td>${it.category ? `<span class="fs-badge">${esc(it.category)}</span>` : "—"}</td>
       <td>${esc(it.item) || "—"}</td>
       <td class="fs-specs" title="${esc(it.specs)}">${esc(it.specs) || "—"}</td>
-      <td style="white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums">${gbp(it.value)}</td>
-      <td class="col-actions" style="white-space:nowrap">
+      <td class="num" data-sort-value="${it.value ?? ""}">${gbp(it.value)}</td>
+      <td class="col-actions">
         <button class="btn-icon fs-edit" data-row="${it.row_index}" title="Edit">✎</button>
         <button class="btn-icon fs-delete danger" data-row="${it.row_index}" title="Remove">✕</button>
       </td>
     </tr>`).join("");
 
   return `
-    <table class="sheet-table">
+    <table class="sheet-table" data-sortable data-sort-id="freebies">
       <thead>
         <tr>
-          ${COLS.map(c => `
-            <th class="fs-sortable${_sort.key === c.key ? " sorted" : ""}" data-sort="${c.key}"
-                style="cursor:pointer;${c.align === "right" ? "text-align:right" : ""}">
-              ${esc(c.label)} ${sortArrow(c.key)}
-            </th>`).join("")}
-          <th class="col-actions"></th>
+          ${COLS.map(c =>
+            `<th data-type="${c.type}" class="${c.cls || ""}">${esc(c.label)}</th>`).join("")}
+          <th class="col-actions" data-nosort></th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -296,9 +260,7 @@ function wireEvents(container) {
 
 function wireTableEvents(wrap) {
   if (!wrap) return;
-  wrap.querySelectorAll("th.fs-sortable").forEach(th =>
-    th.addEventListener("click", () => setSort(th.dataset.sort))
-  );
+  makeSortable(wrap);
   wrap.querySelectorAll(".fs-edit").forEach(btn =>
     btn.addEventListener("click", e => openModal(parseInt(e.currentTarget.dataset.row, 10)))
   );

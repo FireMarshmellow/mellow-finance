@@ -12,6 +12,7 @@ data/
 # Environment / secrets
 .env
 .env.*
+piinfo.txt
 
 # OS
 .DS_Store
