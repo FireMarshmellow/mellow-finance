@@ -145,7 +145,6 @@ function buildPage() {
     <div class="page-header">
       <div>
         <div class="page-title">Bank Statements</div>
-        <div class="page-subtitle">Upload &amp; organise statement PDFs by account</div>
       </div>
       <button class="btn btn-primary" id="stmt-add-account">＋ Add Account</button>
     </div>

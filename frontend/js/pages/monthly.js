@@ -216,7 +216,6 @@ export async function renderMonthly(container) {
     <div class="page-header">
       <div>
         <div class="page-title">Monthly Summary</div>
-        <div class="page-subtitle">Income and expenses by month — filter to any date range</div>
       </div>
     </div>
 

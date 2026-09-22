@@ -508,7 +508,6 @@ function paint() {
     <div class="page-header no-print">
       <div>
         <div class="page-title">Financial Years</div>
-        <div class="page-subtitle">Income, expenses, in-kind contributions &amp; statements — ready for your accountant</div>
       </div>
     </div>
     ${renderTabs()}

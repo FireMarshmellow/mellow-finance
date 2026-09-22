@@ -13,7 +13,6 @@ export async function renderSettings(container) {
   container.innerHTML = `
     <div class="page-header">
       <div class="page-title">Settings</div>
-      <div class="page-subtitle">Configure integrations and API keys</div>
     </div>
 
     <div class="settings-card">

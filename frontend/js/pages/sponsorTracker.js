@@ -135,7 +135,6 @@ function buildPage() {
   return `
     <div class="page-header">
       <div class="page-title">Sponsor Tracker</div>
-      <div class="page-subtitle">YouTube-sponsored videos with milestone bonus tracking</div>
     </div>
 
     <div class="sponsor-add-bar">

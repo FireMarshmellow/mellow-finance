@@ -351,7 +351,6 @@ export async function renderSheet(container, sheetId) {
     <div class="page-header">
       <div>
         <div class="page-title">${escHtml(label)}</div>
-        <div class="page-subtitle">Raw data — click a cell to edit, Tab to move along, click a column header to sort</div>
       </div>
     </div>
 

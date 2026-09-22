@@ -172,7 +172,7 @@ body { display: flex; }
 /* ── Page Header ─────────────────────────────────────────────────────────── */
 .page-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: 24px;
   flex-wrap: wrap;
@@ -185,11 +185,6 @@ body { display: flex; }
   color: var(--text);
 }
 
-.page-subtitle {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
 
 /* ── Stat Cards ──────────────────────────────────────────────────────────── */
 .stat-grid {

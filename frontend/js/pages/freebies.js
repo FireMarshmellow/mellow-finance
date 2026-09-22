@@ -68,7 +68,6 @@ function buildPage() {
     <div class="page-header">
       <div>
         <div class="page-title">In-Kind Contributions</div>
-        <div class="page-subtitle">Products &amp; benefits received free of charge</div>
       </div>
     </div>
 
