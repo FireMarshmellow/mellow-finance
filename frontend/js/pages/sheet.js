@@ -39,8 +39,30 @@ let _sheetId   = null;
 let _container = null;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+// A column holds dates if its name says so, or if every filled value in it
+// parses as d/m/y — Patreon's "Received_in_account" and "Withdrow from patrion"
+// carry dates without saying "date" anywhere in the name. Amount columns are
+// excluded by their currency prefix.
+const DMY = /^\d{1,2}\/\d{1,2}\/\d{2,4}$/;
+
+let _dateCols = new Set();
+
+function computeDateCols(columns, rows) {
+  _dateCols = new Set(columns.filter(col => {
+    if (/date/i.test(col)) return true;
+    let seen = 0;
+    for (const row of rows) {
+      const v = String(row[col] ?? "").trim();
+      if (!v) continue;
+      seen++;
+      if (!DMY.test(v)) return false;
+    }
+    return seen > 0;
+  }));
+}
+
 function isDateCol(col) {
-  return /date/i.test(col);
+  return _dateCols.has(col) || /date/i.test(col);
 }
 
 function escHtml(s) {
@@ -68,6 +90,8 @@ function colSortType(col, rows) {
 }
 
 function renderTable(columns, rows, category) {
+  computeDateCols(columns, rows);
+
   const thead = `
     <thead>
       <tr>
