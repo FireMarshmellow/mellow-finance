@@ -222,7 +222,7 @@ function initTable(table) {
     th.setAttribute("role", "button");
     th.setAttribute("tabindex", "0");
     if (!th.querySelector(".sort-arrow")) {
-      th.insertAdjacentHTML("beforeend", ` <span class="sort-arrow">↕</span>`);
+      th.insertAdjacentHTML("beforeend", `&nbsp;<span class="sort-arrow">↕</span>`);
     }
 
     th.addEventListener("click", e => {

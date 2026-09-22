@@ -1,6 +1,7 @@
 import { api }  from "../api.js";
 import { gbp, showLoading, toast } from "../app.js";
 import { makeSortable } from "../tableSort.js";
+import { colHeader }       from "../columns.js";
 
 import {
   buildIncomeExpenseBar,
@@ -55,7 +56,7 @@ function statCards(rows) {
 }
 
 function summaryTable(rows) {
-  const headerCols = ALL_COLS.map(c => `<th data-type="num">${c}</th>`).join("");
+  const headerCols = ALL_COLS.map(colHeader).join("");
 
   const bodyRows = rows.map(row => {
     const cells = ALL_COLS.map(col => {
