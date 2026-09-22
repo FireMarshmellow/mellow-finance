@@ -24,18 +24,41 @@ const GRID_COLOR = "rgba(148,163,184,.15)";
 function baseScales() {
   return {
     x: {
-      ticks: { color: AXIS_COLOR, font: { size: 11 } },
-      grid:  { color: GRID_COLOR },
+      ticks: {
+        color: AXIS_COLOR, font: { size: 11 },
+        // Drop labels rather than let them collide when a long run of months
+        // is squeezed into a narrow card.
+        autoSkip: true,
+        autoSkipPadding: 8,
+        maxRotation: 45,
+        minRotation: 0,
+      },
+      grid: { color: GRID_COLOR },
     },
     y: {
       ticks: {
         color: AXIS_COLOR, font: { size: 11 },
+        maxTicksLimit: 6,
         callback: v => "£" + Number(v).toLocaleString("en-GB", { maximumFractionDigits: 0 }),
       },
       grid: { color: GRID_COLOR },
     },
   };
 }
+
+// A right-hand legend eats the width a donut needs; below ~420px of canvas
+// there is no room for both, so the legend moves underneath.
+const responsiveLegend = {
+  id: "responsiveLegend",
+  beforeLayout(chart) {
+    const cfg = chart.options.plugins?.responsiveLegend;
+    if (!cfg || !cfg.breakpoint) return;   // Chart.js defaults this to {} on every chart
+    const legend = chart.options.plugins.legend;
+    const want = chart.width < (cfg.breakpoint ?? 420) ? "bottom" : cfg.wide ?? "right";
+    if (legend.position !== want) legend.position = want;
+  },
+};
+Chart.register(responsiveLegend);
 
 // ── Income vs Expenses grouped bar ────────────────────────────────────────
 export function buildIncomeExpenseBar(canvas, rows) {
@@ -148,6 +171,7 @@ export function buildSourcePie(canvas, rows) {
       maintainAspectRatio: false,
       cutout: "62%",
       plugins: {
+        responsiveLegend: { breakpoint: 420 },
         legend: {
           position: "right",
           labels: { color: AXIS_COLOR, font: { size: 12 }, boxWidth: 14, padding: 12 },
@@ -188,6 +212,7 @@ export function buildExpensePie(canvas, rows) {
       maintainAspectRatio: false,
       cutout: "62%",
       plugins: {
+        responsiveLegend: { breakpoint: 420 },
         legend: {
           position: "right",
           labels: { color: AXIS_COLOR, font: { size: 12 }, boxWidth: 14, padding: 12 },

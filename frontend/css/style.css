@@ -1997,6 +1997,16 @@ table.summary.fy-breakdown {
   }
   :root.nav-collapsed .nav-icon { font-size: 16px; }
 
+  /* The income/expense pages all share a generic ▸ marker, which tells you
+     nothing once the labels are gone — swap it for the page's initials. */
+  :root.nav-collapsed .nav-icon[data-abbr] { font-size: 0; }
+  :root.nav-collapsed .nav-icon[data-abbr]::after {
+    content: attr(data-abbr);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .4px;
+  }
+
   :root.nav-collapsed .sidebar-toggle {
     position: static;
     margin: 10px auto 0;
@@ -2032,3 +2042,82 @@ table.summary.fy-breakdown {
 @media print {
   .nav-tip, .sidebar-toggle { display: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Fitting wide tables and charts
+   ═══════════════════════════════════════════════════════════════ */
+
+/* A flex item defaults to min-width:auto, so a table wider than the viewport
+   used to push .main itself wider and send the WHOLE PAGE scrolling sideways
+   — sidebar included. min-width:0 lets .main shrink, so an oversized table
+   scrolls inside its own .table-scroll and the page layout stays put. */
+.main         { min-width: 0; }
+.page-content { min-width: 0; max-width: min(var(--content-max), 100%); }
+
+@media (min-width: 768px) {
+  /* The 12-column summary used to force a sideways scroll on anything under
+     ~1500px purely because every heading was nowrap. Letting headings wrap
+     costs a second header line only when the width is genuinely tight —
+     auto table layout still keeps them on one line when there is room. */
+  table.summary thead th {
+    white-space: normal;
+    line-height: 1.25;
+    vertical-align: bottom;
+  }
+
+  /* Every column but the period label is numeric — keep enough room for a
+     £00,000.00 value so wrapping headings do not crush them. */
+  table.summary thead th + th { min-width: 80px; }
+
+  /* Gutters shrink with the viewport before the table gives up and scrolls. */
+  table.summary thead th,
+  table.summary td { padding: 9px clamp(8px, .62vw, 14px); }
+
+  table.summary { font-size: clamp(12px, .8vw, 13px); }
+
+  /* Charts grow with the viewport instead of sitting at a fixed 240px. */
+  .chart-canvas-wrap { height: clamp(230px, 25vh, 340px); }
+}
+
+/* A donut needs its width back once the legend drops underneath it. */
+@media (max-width: 1099px) {
+  .chart-canvas-wrap { height: clamp(240px, 30vh, 320px); }
+}
+
+/* ── Scroll affordance on tables still too wide to fit ──────────────────── */
+.table-card { position: relative; }
+
+.table-card::before,
+.table-card::after {
+  content: "";
+  position: absolute;
+  top: var(--thead-offset, 0px);
+  bottom: 0;
+  width: 26px;
+  z-index: 4;               /* above the sticky header (3) and first column (1) */
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+
+.table-card::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(15, 23, 42, .16), rgba(15, 23, 42, 0));
+}
+
+.table-card::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(15, 23, 42, .16), rgba(15, 23, 42, 0));
+}
+
+.table-card.has-scroll-left::before  { opacity: 1; }
+.table-card.has-scroll-right::after  { opacity: 1; }
+
+@media print {
+  .table-card::before, .table-card::after { display: none !important; }
+}
+
+/* The FY income/expense statement is deliberately capped at 760px, but its
+   card still stretched the full width — a third of a wide screen of empty
+   white beside a narrow table. Cap the card to match. */
+.table-card:has(> .table-scroll > table.fy-breakdown) { max-width: 760px; }

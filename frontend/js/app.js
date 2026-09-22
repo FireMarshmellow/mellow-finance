@@ -6,6 +6,7 @@ import { renderSponsorTracker } from "./pages/sponsorTracker.js";
 import { renderFreebies }      from "./pages/freebies.js";
 import { renderStatements }    from "./pages/statements.js";
 import { renderSettings }      from "./pages/settings.js";
+import { watchTableFit }       from "./tableFit.js";
 
 const content = document.getElementById("page-content");
 
@@ -235,6 +236,8 @@ async function route() {
     console.error(err);
   }
 }
+
+watchTableFit(content);   // scroll shadows on any table too wide to fit
 
 window.addEventListener("hashchange", () => { closeSidebar(); route(); });
 route();   // initial load
