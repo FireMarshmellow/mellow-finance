@@ -1914,3 +1914,121 @@ table.summary.fy-breakdown {
   .fy-stmt-account, .fy-stmt-year, tr { break-inside: avoid; }
   body { background: #fff !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Collapsible sidebar + fluid scaling
+   Appended last so these win over the equal-specificity base rules.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Collapsed width lives on <html> so both the sidebar and the main
+   column pick it up from the same custom property. */
+:root       { --sidebar-w: 240px; }
+:root.nav-collapsed { --sidebar-w: 68px; }
+
+.sidebar { overflow: hidden; }          /* the inner .sidebar-scroll scrolls instead */
+
+/* Nav list scrolls; header, Settings and the version footer stay pinned. */
+.sidebar-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #1e293b transparent;
+}
+.sidebar-scroll::-webkit-scrollbar       { width: 6px; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+
+.sidebar-header { position: relative; }
+
+.sidebar-toggle {
+  position: absolute;
+  top: 16px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--nav-text);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.sidebar-toggle:hover { background: var(--nav-hover-bg); color: #f1f5f9; }
+.sidebar-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Width + offset animate together so the page slides rather than jumps. */
+.sidebar { transition: width .22s ease; }
+.main    { transition: margin-left .22s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, .main { transition: none; }
+}
+
+/* ── Collapsed rail (desktop only — phones keep the slide-over drawer) ──── */
+@media (min-width: 768px) {
+  :root.nav-collapsed .logo-text,
+  :root.nav-collapsed .sidebar-sub,
+  :root.nav-collapsed .nav-label,
+  :root.nav-collapsed .sidebar-footer { display: none; }
+
+  :root.nav-collapsed .sidebar-header { padding: 14px 0 10px; }
+  :root.nav-collapsed .sidebar-logo   { justify-content: center; gap: 0; margin-bottom: 0; }
+  :root.nav-collapsed .logo-icon      { font-size: 22px; }
+
+  /* Group headings become hairline dividers. */
+  :root.nav-collapsed .sidebar-label {
+    font-size: 0;
+    line-height: 0;
+    padding: 0;
+    margin: 10px 16px;
+    border-top: 1px solid var(--sidebar-border);
+  }
+
+  :root.nav-collapsed .sidebar-section { padding: 6px 0 2px; }
+
+  :root.nav-collapsed .nav-item {
+    justify-content: center;
+    gap: 0;
+    padding: 10px 0;
+  }
+  :root.nav-collapsed .nav-icon { font-size: 16px; }
+
+  :root.nav-collapsed .sidebar-toggle {
+    position: static;
+    margin: 10px auto 0;
+    transform: rotate(180deg);
+  }
+
+  /* Fluid gutters: tight on a laptop, generous on a 1440p+ panel. */
+  .page-content { padding: clamp(18px, 1.8vw, 34px) clamp(18px, 2.2vw, 48px); }
+}
+
+/* ── Rail tooltip ───────────────────────────────────────────────────────── */
+.nav-tip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #f1f5f9;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity .12s ease, transform .12s ease;
+}
+.nav-tip.visible { opacity: 1; transform: translateX(0); }
+
+@media print {
+  .nav-tip, .sidebar-toggle { display: none !important; }
+}
