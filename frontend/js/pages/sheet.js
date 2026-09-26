@@ -9,8 +9,10 @@
  * re-fetch automatically since we always call the API on render.
  */
 import { api }  from "../api.js";
-import { showLoading, toast } from "../app.js";
+import { showLoading, toast, gbp, confirmModal } from "../app.js";
 import { makeSortable } from "../tableSort.js";
+import { fyLabelForDate, fmtIso, parseIso } from "../dates.js";
+import { ICON_TRASH, ICON_PLUS, ICON_DOWNLOAD, ICON_SEARCH } from "../icons.js";
 
 const SHEET_LABELS = {
   youtube_adsense: "YouTube AdSense",
@@ -37,6 +39,8 @@ const SHEET_CATEGORY = {
 // ── State ──────────────────────────────────────────────────────────────────
 let _sheetId   = null;
 let _container = null;
+let _columns   = [];
+let _rows      = [];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 // A column holds dates if its name says so, or if every filled value in it
@@ -73,6 +77,13 @@ function escHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
+// Header text only — the raw name stays the key for every read and write.
+// "Received_amount_in_account" → "Received amount in account"
+function humanize(col) {
+  const s = String(col).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 // ── Table rendering ────────────────────────────────────────────────────────
 
 // Column sort mode: dates by name, otherwise numeric only when every filled
@@ -98,14 +109,19 @@ function renderTable(columns, rows, category) {
         <th class="col-row-no" data-type="num" title="Source row number">#</th>
         ${columns.map(c => {
           const type = colSortType(c, rows);
-          return `<th data-type="${type}" class="${type === "num" ? "num" : ""}">${escHtml(c)}<div class="col-resize-handle"></div></th>`;
+          const label = humanize(c);
+          const title = label === c ? "" : ` title="${escHtml(c)}"`;
+          return `<th data-type="${type}" class="${type === "num" ? "num" : ""}"${title}>${escHtml(label)}<div class="col-resize-handle"></div></th>`;
         }).join("")}
-        <th class="col-actions" data-nosort>✕</th>
+        <th class="col-actions" data-nosort><span class="sr-only">Actions</span></th>
       </tr>
     </thead>`;
 
   const types = Object.fromEntries(columns.map(c => [c, colSortType(c, rows)]));
 
+  // Newest entries first: rows are appended to the CSV as they happen, so the
+  // latest ones would otherwise sit at the very bottom. data-row keeps the
+  // true source index for edits and deletes.
   const tbody = rows.map((row, idx) => {
     const cells = columns.map(col => {
       const val = row[col] ?? "";
@@ -121,10 +137,10 @@ function renderTable(columns, rows, category) {
         <td class="col-row-no">${idx + 1}</td>
         ${cells}
         <td class="col-actions">
-          <button class="btn-del" data-row="${idx}" title="Delete row">✕</button>
+          <button class="btn-icon danger btn-del" data-row="${idx}" title="Delete row" aria-label="Delete row ${idx + 1}">${ICON_TRASH}</button>
         </td>
       </tr>`;
-  }).join("");
+  }).reverse().join("");
 
   return `<table class="sheet-table" data-sortable data-sort-id="sheet:${escHtml(_sheetId)}">${thead}<tbody>${tbody}</tbody></table>`;
 }
@@ -145,13 +161,73 @@ async function reload() {
 
   const { columns, rows } = data;
   const cat = SHEET_CATEGORY[_sheetId] || "income";
-
-  // Update row count badge
-  const badge = document.getElementById("row-count");
-  if (badge) badge.textContent = `${rows.length} row${rows.length !== 1 ? "s" : ""}`;
+  _columns = columns;
+  _rows    = rows;
 
   wrapper.innerHTML = renderTable(columns, rows, cat);
   wireTable(wrapper, columns, rows);
+  applySearch();
+  refreshStats();
+}
+
+// ── Stats strip ────────────────────────────────────────────────────────────
+// Totals come from the same normalised transactions the summaries use, so they
+// always agree with the Financial Year and Monthly pages — including which rows
+// count (a row with no parseable date or amount is left out there too).
+async function refreshStats() {
+  const el = document.getElementById("sheet-stats");
+  if (!el) return;
+  const label = SHEET_LABELS[_sheetId];
+  let txns = [];
+  try { txns = (await api.getTransactions()).transactions.filter(t => t.source === label); }
+  catch (_) { el.innerHTML = ""; return; }
+
+  const cat    = SHEET_CATEGORY[_sheetId] || "income";
+  const thisFY = fyLabelForDate(new Date());
+  const total  = txns.reduce((s, t) => s + t.amount_gbp, 0);
+  const fyTot  = txns.filter(t => fyLabelForDate(parseIso(t.date)) === thisFY)
+                     .reduce((s, t) => s + t.amount_gbp, 0);
+  const latest = txns.reduce((m, t) => (t.date > m ? t.date : m), "");
+  const skipped = _rows.length - txns.length;
+
+  el.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">This financial year</div>
+      <div class="stat-value ${cat}">${gbp(fyTot)}</div>
+      <div class="stat-meta">FY ${thisFY}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">All time</div>
+      <div class="stat-value">${gbp(total)}</div>
+      <div class="stat-meta">${txns.length} ${txns.length === 1 ? "entry" : "entries"}${skipped > 0
+        ? ` · <span title="Rows without a readable date or amount are left out of every total">${skipped} row${skipped !== 1 ? "s" : ""} not counted</span>` : ""}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Latest entry</div>
+      <div class="stat-value stat-value-sm">${latest ? fmtIso(latest) : "—"}</div>
+    </div>`;
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────
+// Hides rows that don't contain the query anywhere; the add-row form stays put.
+function applySearch() {
+  const q     = (document.getElementById("sheet-search")?.value || "").trim().toLowerCase();
+  const tbody = document.querySelector("#sheet-table-wrap .sheet-table tbody");
+  const count = document.getElementById("row-count");
+  if (!tbody) return;
+  let shown = 0, total = 0;
+  for (const tr of tbody.rows) {
+    if (tr.id === "add-row-form") continue;
+    total++;
+    const hit = !q || tr.textContent.toLowerCase().includes(q);
+    tr.hidden = !hit;
+    if (hit) shown++;
+  }
+  if (count) {
+    count.textContent = q
+      ? `${shown} of ${total} row${total !== 1 ? "s" : ""}`
+      : `${total} row${total !== 1 ? "s" : ""}`;
+  }
 }
 
 // ── CSV export ─────────────────────────────────────────────────────────────
@@ -244,7 +320,8 @@ function wireTable(wrapper, columns, rows) {
         e.preventDefault();
         // Move to next cell in row or first cell of next row
         const td      = input.closest("td");
-        const allTds  = [...wrapper.querySelectorAll("td[data-col]")];
+        const allTds  = [...wrapper.querySelectorAll("td[data-col]")]
+          .filter(c => !c.closest("tr").hidden);   // skip rows hidden by search
         const cur     = allTds.indexOf(td);
         const next    = allTds[cur + 1];
         input.blur();
@@ -285,7 +362,8 @@ function wireTable(wrapper, columns, rows) {
   wrapper.querySelectorAll(".btn-del").forEach(btn => {
     btn.addEventListener("click", async () => {
       const rowIdx = parseInt(btn.dataset.row, 10);
-      if (!confirm(`Delete row ${rowIdx + 1}? This cannot be undone.`)) return;
+      if (!(await confirmModal(`Delete row ${rowIdx + 1}? This cannot be undone.`,
+            { title: "Delete row", okText: "Delete row" }))) return;
       try {
         await api.deleteRow(_sheetId, rowIdx);
         toast("Row deleted");
@@ -304,12 +382,10 @@ async function addRow(columns) {
   if (document.getElementById(formId)) return;  // already open
 
   const fields = columns.map(col => `
-    <td style="padding:5px 8px">
-      <input type="text" name="${escHtml(col)}"
-             placeholder="${isDateCol(col) ? "DD/MM/YYYY" : escHtml(col)}"
-             ${isDateCol(col) ? 'data-datepicker="true"' : ""}
-             style="width:100%;padding:6px 10px;border:1px solid var(--accent);border-radius:4px;
-                    font-size:12px;font-family:inherit;background:#f0f9ff;outline:none;" />
+    <td class="new-row-cell">
+      <input type="text" class="new-row-input" name="${escHtml(col)}"
+             placeholder="${isDateCol(col) ? "DD/MM/YYYY" : escHtml(humanize(col))}"
+             ${isDateCol(col) ? 'data-datepicker="true"' : ""} />
     </td>`).join("");
 
   const formRow = document.createElement("tr");
@@ -317,10 +393,10 @@ async function addRow(columns) {
   formRow.className = "new-row";
   formRow.setAttribute("data-no-sort", "");   // stays pinned to the top when sorting
   formRow.innerHTML = `
-    <td class="col-row-no" style="color:var(--income);font-weight:700">NEW</td>
+    <td class="col-row-no new-row-tag">New</td>
     ${fields}
-    <td class="col-actions" style="padding:5px 6px">
-      <button id="btn-save-new" class="btn btn-primary" style="padding:5px 10px;font-size:12px">Save</button>
+    <td class="col-actions new-row-cell">
+      <button id="btn-save-new" class="btn btn-primary btn-sm">Save</button>
     </td>`;
 
   const tbody = document.querySelector(".sheet-table tbody");
@@ -370,23 +446,31 @@ export async function renderSheet(container, sheetId) {
   const { columns, rows } = data;
   const label = SHEET_LABELS[sheetId] || sheetId;
   const cat   = SHEET_CATEGORY[sheetId] || "income";
+  _columns = columns;
+  _rows    = rows;
 
   container.innerHTML = `
     <div class="page-header">
-      <div>
-        <div class="page-title">${escHtml(label)}</div>
+      <div class="page-title">
+        ${escHtml(label)}
+        <span class="badge ${cat}">${cat === "income" ? "Income" : "Expense"}</span>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="btn-export-csv">${ICON_DOWNLOAD} Export CSV</button>
+        <button class="btn btn-primary" id="btn-add-row">${ICON_PLUS} Add row</button>
       </div>
     </div>
 
+    <div class="stat-grid stat-grid-3" id="sheet-stats"></div>
+
     <div class="table-card">
       <div class="sheet-toolbar">
-        <span class="badge ${cat}">${cat}</span>
-        <span id="row-count" style="font-size:12px;color:var(--text-muted)">${rows.length} rows</span>
-        <button class="btn btn-primary" id="btn-add-row">＋ Add Row</button>
-        <button class="btn btn-secondary" id="btn-export-csv">↓ Export CSV</button>
-        <span style="margin-left:auto;font-size:11px;color:var(--text-faint)">
-          Changes auto-save on Tab / Enter / click away
-        </span>
+        <label class="search-box">
+          ${ICON_SEARCH}
+          <input type="search" id="sheet-search" placeholder="Search ${escHtml(label)}…" autocomplete="off" />
+        </label>
+        <span id="row-count" class="toolbar-count">${rows.length} rows</span>
+        <span class="toolbar-hint">Click a cell to edit · saves on Enter, Tab or click away</span>
       </div>
       <div class="table-scroll" id="sheet-table-wrap">
         ${renderTable(columns, rows, cat)}
@@ -398,12 +482,18 @@ export async function renderSheet(container, sheetId) {
     columns,
     rows,
   );
+  applySearch();     // sets the row-count label
+  refreshStats();
+
+  document.getElementById("sheet-search").addEventListener("input", applySearch);
 
   document.getElementById("btn-add-row").addEventListener("click", () => {
-    addRow(columns);
+    addRow(_columns);
   });
 
+  // Reads the module state, not the first render's rows, so an export after
+  // edits, adds or deletes includes them.
   document.getElementById("btn-export-csv").addEventListener("click", () => {
-    exportCsv(sheetId, columns, rows);
+    exportCsv(sheetId, _columns, _rows);
   });
 }

@@ -2,12 +2,12 @@ import { api }  from "../api.js";
 import { gbp, showLoading, toast } from "../app.js";
 import { makeSortable } from "../tableSort.js";
 import { colHeader }       from "../columns.js";
+import { isoLocal, parseIso, fmtIso, fyStartYear } from "../dates.js";
 
 import {
   buildIncomeExpenseBar,
-  buildNetTrend,
-  buildMonthlyStacked,
-  buildSourcePie,
+  buildNetBars,
+  buildIncomeStacked,
 } from "../charts.js";
 
 const INCOME_SOURCES  = ["YouTube AdSense", "Patreon", "Sponsorships", "Other Income"];
@@ -19,6 +19,44 @@ const ALL_COLS = [
 
 let _startPicker, _endPicker;   // flatpickr instances
 
+// ── Date range presets ─────────────────────────────────────────────────────
+// Sixty-odd months in one chart is unreadable, so the page opens on the last
+// 12 months; "All time" is one click away and the choice is remembered.
+const PRESETS = [
+  { id: "12m",    label: "Last 12 months" },
+  { id: "fy",     label: "This FY" },
+  { id: "lastfy", label: "Last FY" },
+  { id: "all",    label: "All time" },
+];
+const PRESET_KEY = "monthly-range";
+
+function presetRange(id) {
+  const today = new Date();
+  const fy    = fyStartYear(today);
+  switch (id) {
+    case "12m":    return [isoLocal(new Date(today.getFullYear(), today.getMonth() - 11, 1)), isoLocal(today)];
+    case "fy":     return [isoLocal(new Date(fy, 3, 6)),     isoLocal(today)];
+    case "lastfy": return [isoLocal(new Date(fy - 1, 3, 6)), isoLocal(new Date(fy, 3, 5))];
+    default:       return [null, null];
+  }
+}
+
+function savedPreset() {
+  try {
+    const v = localStorage.getItem(PRESET_KEY);
+    if (PRESETS.some(p => p.id === v)) return v;
+  } catch (_) {}
+  return "12m";
+}
+
+function rememberPreset(id) {
+  try { localStorage.setItem(PRESET_KEY, id); } catch (_) {}
+}
+
+function rangeCaption(start, end) {
+  return start && end ? `${fmtIso(start)} – ${fmtIso(end)}` : "Every month on record";
+}
+
 function statCards(rows) {
   if (!rows.length) return "";
   const totalIncome  = rows.reduce((s, r) => s + r["Total Income"],  0);
@@ -28,14 +66,14 @@ function statCards(rows) {
   const worst = rows.reduce((a, b) => b["Net"] < a["Net"] ? b : a);
 
   return `
-    <div class="stat-grid">
+    <div class="stat-grid stat-grid-5">
       <div class="stat-card">
-        <div class="stat-label">Total Income</div>
+        <div class="stat-label">Income</div>
         <div class="stat-value income">${gbp(totalIncome)}</div>
         <div class="stat-meta">across ${rows.length} month${rows.length !== 1 ? "s" : ""}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Total Expenses</div>
+        <div class="stat-label">Expenses</div>
         <div class="stat-value expense">${gbp(totalExpense)}</div>
       </div>
       <div class="stat-card">
@@ -43,13 +81,13 @@ function statCards(rows) {
         <div class="stat-value ${net >= 0 ? "positive" : "negative"}">${gbp(net)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Best Month (Net)</div>
-        <div class="stat-value positive">${gbp(best["Net"])}</div>
+        <div class="stat-label">Best month</div>
+        <div class="stat-value ${best["Net"] >= 0 ? "positive" : "negative"}">${gbp(best["Net"])}</div>
         <div class="stat-meta">${best.period}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Worst Month (Net)</div>
-        <div class="stat-value negative">${gbp(worst["Net"])}</div>
+        <div class="stat-label">Worst month</div>
+        <div class="stat-value ${worst["Net"] >= 0 ? "positive" : "negative"}">${gbp(worst["Net"])}</div>
         <div class="stat-meta">${worst.period}</div>
       </div>
     </div>`;
@@ -76,8 +114,8 @@ function summaryTable(rows) {
   return `
     <div class="table-card">
       <div class="table-card-header">
-        <span class="table-card-title">Monthly Breakdown</span>
-        <span style="font-size:11px;color:var(--text-faint)">Click a column header to sort</span>
+        <span class="table-card-title">Monthly breakdown</span>
+        <span class="table-card-note">Click a column header to sort</span>
       </div>
       <div class="table-scroll">
         <table class="summary" data-sortable data-sort-id="monthly-summary">
@@ -115,7 +153,7 @@ function transactionPanels(transactions) {
   const panel = (title, items, total, cls, rowFn, col2, sortId) => `
     <div class="txn-panel">
       <div class="txn-panel-header ${cls}">
-        <span class="txn-panel-title">${title}</span>
+        <span class="txn-panel-title">${title} <span class="txn-panel-count">${items.length}</span></span>
         <span class="txn-panel-total">${gbp(total)}</span>
       </div>
       ${items.length ? `
@@ -145,10 +183,13 @@ async function fetchAndRender(start, end) {
   const txnEl    = document.getElementById("txn-area");
   if (!chartsEl) return;
 
-  chartsEl.innerHTML = `<div class="loading-state" style="padding:40px"><div class="spinner"></div></div>`;
-  statsEl.innerHTML  = "";
-  tableEl.innerHTML  = "";
-  txnEl.innerHTML    = "";
+  const caption = document.getElementById("range-caption");
+  if (caption) caption.textContent = rangeCaption(start, end);
+
+  // Keep the previous render on screen, dimmed, until the new one is ready —
+  // no flash of empty page when switching ranges.
+  const areas = [statsEl, chartsEl, tableEl, txnEl];
+  areas.forEach(el => el.classList.add("is-refreshing"));
 
   let data, txnData;
   try {
@@ -157,13 +198,16 @@ async function fetchAndRender(start, end) {
       api.getTransactions(start, end),
     ]);
   } catch (err) {
+    areas.forEach(el => el.classList.remove("is-refreshing"));
     chartsEl.innerHTML = `<div class="error-banner">⚠ ${err.message}</div>`;
     return;
   }
+  areas.forEach(el => el.classList.remove("is-refreshing"));
 
   const { rows } = data;
 
   if (!rows.length) {
+    statsEl.innerHTML = tableEl.innerHTML = txnEl.innerHTML = "";
     chartsEl.innerHTML = `<div class="empty-state">No data for this period.</div>`;
     return;
   }
@@ -173,16 +217,16 @@ async function fetchAndRender(start, end) {
   chartsEl.innerHTML = `
     <div class="chart-grid">
       <div class="chart-card">
-        <div class="chart-card-title">Income vs Expenses by Month</div>
+        <div class="chart-card-title">Income vs expenses</div>
         <div class="chart-canvas-wrap"><canvas id="chart-bar"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-card-title">Net by Month</div>
+        <div class="chart-card-title">Net profit / loss</div>
         <div class="chart-canvas-wrap"><canvas id="chart-net"></canvas></div>
       </div>
-      <div class="chart-card" style="grid-column: 1 / -1;">
-        <div class="chart-card-title">Income Sources Stacked by Month</div>
-        <div class="chart-canvas-wrap" style="height:280px;"><canvas id="chart-stacked"></canvas></div>
+      <div class="chart-card chart-card-wide">
+        <div class="chart-card-title">Income by source</div>
+        <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chart-stacked"></canvas></div>
       </div>
     </div>`;
 
@@ -193,37 +237,59 @@ async function fetchAndRender(start, end) {
   makeSortable(txnEl);
 
   buildIncomeExpenseBar(document.getElementById("chart-bar"),     rows);
-  buildNetTrend        (document.getElementById("chart-net"),     rows);
-  buildMonthlyStacked  (document.getElementById("chart-stacked"), rows);
+  buildNetBars         (document.getElementById("chart-net"),     rows);
+  buildIncomeStacked   (document.getElementById("chart-stacked"), rows);
 }
 
-function rangeBar() {
+function rangeBar(active) {
   return `
     <div class="range-bar" id="range-bar">
-      <label>From</label>
-      <input type="text" id="range-start" placeholder="DD/MM/YYYY" readonly />
-      <span class="range-separator">→</span>
-      <label>To</label>
-      <input type="text" id="range-end" placeholder="DD/MM/YYYY" readonly />
-      <button class="btn btn-primary" id="btn-apply">Apply</button>
-      <button class="btn btn-ghost"   id="btn-reset">Reset</button>
+      <div class="seg" role="group" aria-label="Date range">
+        ${PRESETS.map(p => `
+          <button class="seg-btn${p.id === active ? " active" : ""}" data-preset="${p.id}"
+                  aria-pressed="${p.id === active}">${p.label}</button>`).join("")}
+      </div>
+      <div class="range-custom">
+        <input type="text" id="range-start" placeholder="From" aria-label="From date" readonly />
+        <span class="range-separator">→</span>
+        <input type="text" id="range-end" placeholder="To" aria-label="To date" readonly />
+        <button class="btn btn-secondary btn-sm" id="btn-apply">Apply</button>
+      </div>
+      <span class="range-caption" id="range-caption"></span>
     </div>`;
+}
+
+function setActivePreset(id) {
+  document.querySelectorAll("#range-bar .seg-btn").forEach(b => {
+    const on = b.dataset.preset === id;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+}
+
+function applyPreset(id) {
+  rememberPreset(id);
+  setActivePreset(id);
+  const [s, e] = presetRange(id);
+  // Mirror the preset in the custom pickers so tweaking it starts from here.
+  _startPicker?.setDate(s ? parseIso(s) : null, false);
+  _endPicker?.setDate(e ? parseIso(e) : null, false);
+  fetchAndRender(s, e);
 }
 
 export async function renderMonthly(container) {
   showLoading();
+  const preset = savedPreset();
 
   container.innerHTML = `
     <div class="page-header">
-      <div>
-        <div class="page-title">Monthly Summary</div>
-      </div>
+      <div class="page-title">Monthly Summary</div>
     </div>
 
-    ${rangeBar()}
+    ${rangeBar(preset)}
 
     <div id="stats-area"></div>
-    <div id="charts-area"></div>
+    <div id="charts-area"><div class="loading-state"><div class="spinner"></div></div></div>
     <div id="table-area"></div>
     <div id="txn-area"></div>
   `;
@@ -238,21 +304,18 @@ export async function renderMonthly(container) {
     allowInput: false,
   });
 
+  document.querySelectorAll("#range-bar .seg-btn").forEach(btn =>
+    btn.addEventListener("click", () => applyPreset(btn.dataset.preset))
+  );
+
   document.getElementById("btn-apply").addEventListener("click", () => {
     const s = _startPicker.selectedDates[0];
     const e = _endPicker.selectedDates[0];
     if (!s || !e) { toast("Please select both start and end dates.", "error"); return; }
     if (s > e)    { toast("Start date must be before end date.", "error"); return; }
-    const fmt = d => d.toISOString().split("T")[0];
-    fetchAndRender(fmt(s), fmt(e));
+    setActivePreset(null);   // a custom range matches no preset
+    fetchAndRender(isoLocal(s), isoLocal(e));
   });
 
-  document.getElementById("btn-reset").addEventListener("click", () => {
-    _startPicker.clear();
-    _endPicker.clear();
-    fetchAndRender(null, null);
-  });
-
-  // Initial load — all months
-  await fetchAndRender(null, null);
+  applyPreset(preset);
 }

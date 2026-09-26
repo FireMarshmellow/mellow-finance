@@ -6,8 +6,10 @@
  *              Quantity / Specifications, Value (£).
  */
 import { api }                    from "../api.js";
-import { showLoading, toast, gbp } from "../app.js";
+import { showLoading, toast, gbp, confirmModal } from "../app.js";
 import { makeSortable }            from "../tableSort.js";
+import { parseIso, fmtIso, fyLabelForDate } from "../dates.js";
+import { ICON_EDIT, ICON_TRASH, ICON_PLUS } from "../icons.js";
 
 let _items     = [];
 let _providers = [];
@@ -53,43 +55,37 @@ function displayItems() {
     (b.date_iso || "0000-00-00").localeCompare(a.date_iso || "0000-00-00"));
 }
 
-// Format "2026-04-13" → "13 Apr 2026"
-function fmtDate(iso) {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-");
-  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m - 1] || "";
-  return `${+d} ${mon} ${y}`;
-}
-
 // ── page skeleton ─────────────────────────────────────────────────────────────
 
 function buildPage() {
   return `
     <div class="page-header">
-      <div>
-        <div class="page-title">In-Kind Contributions</div>
+      <div class="page-title">In-Kind Contributions</div>
+      <div class="page-actions">
+        <button class="btn btn-primary" id="fs-btn-add">${ICON_PLUS} Add item</button>
       </div>
     </div>
 
-    <div class="stat-grid stat-grid-3" style="margin-bottom:24px;">
+    <div class="stat-grid stat-grid-3">
       <div class="stat-card">
-        <div class="stat-label">Total Items</div>
-        <div class="stat-value" id="fs-stat-count">${_items.length}</div>
+        <div class="stat-label">This financial year</div>
+        <div class="stat-value" id="fs-stat-year">${gbp(fyValue())}</div>
+        <div class="stat-meta">FY ${fyLabelForDate(new Date())}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Total Value</div>
+        <div class="stat-label">All time</div>
         <div class="stat-value" id="fs-stat-total">${gbp(totalValue())}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Value This Year</div>
-        <div class="stat-value" id="fs-stat-year">${gbp(yearValue())}</div>
+        <div class="stat-label">Items received</div>
+        <div class="stat-value" id="fs-stat-count">${_items.length}</div>
       </div>
     </div>
 
     <div class="table-card">
       <div class="sheet-toolbar">
-        <span id="fs-row-count" style="font-size:12px;color:var(--text-muted)">${_items.length} item${_items.length !== 1 ? "s" : ""}</span>
-        <button class="btn btn-primary" id="fs-btn-add">＋ Add Item</button>
+        <span id="fs-row-count" class="toolbar-count">${_items.length} item${_items.length !== 1 ? "s" : ""}</span>
+        <span class="toolbar-hint">Non-cash · kept out of income and net</span>
       </div>
       <div class="table-scroll" id="fs-table-wrap">
         ${renderTable()}
@@ -105,10 +101,11 @@ function totalValue() {
   return _items.reduce((s, it) => s + (it.value || 0), 0);
 }
 
-function yearValue() {
-  const yr = String(new Date().getFullYear());
+// UK financial year, matching the Financial Year page's in-kind section.
+function fyValue() {
+  const fy = fyLabelForDate(new Date());
   return _items
-    .filter(it => (it.date_iso || "").startsWith(yr))
+    .filter(it => it.date_iso && fyLabelForDate(parseIso(it.date_iso)) === fy)
     .reduce((s, it) => s + (it.value || 0), 0);
 }
 
@@ -116,20 +113,20 @@ function yearValue() {
 
 function renderTable() {
   if (!_items.length) {
-    return `<div class="empty-state" style="padding:40px 0">No items yet. Click “＋ Add Item” to log something you received for free.</div>`;
+    return `<div class="empty-state" style="padding:40px 0">No items yet. Use “Add item” to log something you received for free.</div>`;
   }
 
   const rows = displayItems().map(it => `
     <tr data-row="${it.row_index}">
-      <td class="col-date" data-sort-value="${esc(it.date_iso)}">${esc(fmtDate(it.date_iso)) || esc(it.date) || "—"}</td>
+      <td class="col-date" data-sort-value="${esc(it.date_iso)}">${esc(fmtIso(it.date_iso)) || esc(it.date) || "—"}</td>
       <td>${esc(it.provider) || "—"}</td>
       <td>${it.category ? `<span class="fs-badge">${esc(it.category)}</span>` : "—"}</td>
       <td>${esc(it.item) || "—"}</td>
       <td class="fs-specs" title="${esc(it.specs)}">${esc(it.specs) || "—"}</td>
       <td class="num" data-sort-value="${it.value ?? ""}">${gbp(it.value)}</td>
       <td class="col-actions">
-        <button class="btn-icon fs-edit" data-row="${it.row_index}" title="Edit">✎</button>
-        <button class="btn-icon fs-delete danger" data-row="${it.row_index}" title="Remove">✕</button>
+        <button class="btn-icon fs-edit" data-row="${it.row_index}" title="Edit" aria-label="Edit">${ICON_EDIT}</button>
+        <button class="btn-icon fs-delete danger" data-row="${it.row_index}" title="Remove" aria-label="Remove">${ICON_TRASH}</button>
       </td>
     </tr>`).join("");
 
@@ -228,7 +225,7 @@ function refreshStats() {
   const rc = document.getElementById("fs-row-count");
   if (c) c.textContent = _items.length;
   if (t) t.textContent = gbp(totalValue());
-  if (y) y.textContent = gbp(yearValue());
+  if (y) y.textContent = gbp(fyValue());
   if (rc) rc.textContent = `${_items.length} item${_items.length !== 1 ? "s" : ""}`;
 }
 
@@ -297,7 +294,7 @@ function openModal(rowIndex) {
   const dInput = document.getElementById("fs-date");
   _datepicker = flatpickr(dInput, {
     dateFormat: "d/m/Y",
-    defaultDate: it?.date_iso || undefined,
+    defaultDate: parseIso(it?.date_iso),   // a Date — see parseIso
     allowInput: true,
   });
   if (!it) dInput.value = "";
@@ -374,7 +371,8 @@ async function handleDelete(e) {
   const btn = e.currentTarget;
   const row = parseInt(btn.dataset.row, 10);
   const it  = itemByRow(row);
-  if (!confirm(`Remove "${it?.item || it?.provider || "this item"}"?`)) return;
+  if (!(await confirmModal(`Remove “${it?.item || it?.provider || "this item"}”?`,
+        { title: "Remove item", okText: "Remove" }))) return;
 
   btn.disabled = true;
   try {

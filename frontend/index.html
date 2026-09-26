@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mellow Labs Financials</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f172a'/%3E%3Cpath d='M16 6 26 16 16 26 6 16z' fill='none' stroke='%2338bdf8' stroke-width='2.6' stroke-linejoin='round'/%3E%3Cpath d='M16 12 20 16 16 20 12 16z' fill='%2338bdf8'/%3E%3C/svg%3E" />
+  <meta name="theme-color" content="#0f172a" />
   <link rel="stylesheet" href="/css/style.css" />
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
@@ -28,10 +30,9 @@
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-logo">
-      <span class="logo-icon">◈</span>
-      <span class="logo-text">Mellow Labs</span>
+      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3.5 20.5 12 12 20.5 3.5 12z"/><path d="M12 8.5 15.5 12 12 15.5 8.5 12z" fill="currentColor" stroke="none"/></svg></span>
+      <span class="logo-words"><span class="logo-text">Mellow Labs</span><span class="sidebar-sub">Financials</span></span>
     </div>
-    <div class="sidebar-sub">Financials</div>
     <button class="sidebar-toggle" id="sidebar-toggle"
             aria-label="Collapse menu" aria-expanded="true" data-tip="Expand menu">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
@@ -45,62 +46,62 @@
     <div class="sidebar-section">
       <div class="sidebar-label">SUMMARIES</div>
       <a class="nav-item" href="#/yearly"  data-page="yearly" data-tip="Financial Year">
-        <span class="nav-icon">📊</span><span class="nav-label">Financial Year</span>
+        <span class="nav-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><rect x="5" y="11" width="3" height="7" rx="1"/><rect x="10.5" y="6" width="3" height="12" rx="1"/><rect x="16" y="9" width="3" height="9" rx="1"/></svg></span><span class="nav-label">Financial Year</span>
       </a>
       <a class="nav-item" href="#/monthly" data-page="monthly" data-tip="Monthly">
-        <span class="nav-icon">📅</span><span class="nav-label">Monthly</span>
+        <span class="nav-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><span class="nav-label">Monthly</span>
       </a>
     </div>
 
     <div class="sidebar-section">
       <div class="sidebar-label">INCOME</div>
       <a class="nav-item" href="#/sheet/youtube_adsense"  data-page="sheet/youtube_adsense" data-tip="YouTube AdSense">
-        <span class="nav-icon income-dot" data-abbr="YT">▸</span><span class="nav-label">YouTube AdSense</span>
+        <span class="nav-icon nav-dot income-dot" data-abbr="YT"></span><span class="nav-label">YouTube AdSense</span>
       </a>
       <a class="nav-item" href="#/sheet/patreon"         data-page="sheet/patreon" data-tip="Patreon">
-        <span class="nav-icon income-dot" data-abbr="PA">▸</span><span class="nav-label">Patreon</span>
+        <span class="nav-icon nav-dot income-dot" data-abbr="PA"></span><span class="nav-label">Patreon</span>
       </a>
       <a class="nav-item" href="#/sheet/sponsorships"    data-page="sheet/sponsorships" data-tip="Sponsorships">
-        <span class="nav-icon income-dot" data-abbr="SP">▸</span><span class="nav-label">Sponsorships</span>
+        <span class="nav-icon nav-dot income-dot" data-abbr="SP"></span><span class="nav-label">Sponsorships</span>
       </a>
       <a class="nav-item" href="#/sheet/other_income"    data-page="sheet/other_income" data-tip="Other Income">
-        <span class="nav-icon income-dot" data-abbr="OI">▸</span><span class="nav-label">Other Income</span>
+        <span class="nav-icon nav-dot income-dot" data-abbr="OI"></span><span class="nav-label">Other Income</span>
       </a>
     </div>
 
     <div class="sidebar-section">
       <div class="sidebar-label">EXPENSES</div>
       <a class="nav-item" href="#/sheet/amazon"          data-page="sheet/amazon" data-tip="Amazon">
-        <span class="nav-icon expense-dot" data-abbr="AM">▸</span><span class="nav-label">Amazon</span>
+        <span class="nav-icon nav-dot expense-dot" data-abbr="AM"></span><span class="nav-label">Amazon</span>
       </a>
       <a class="nav-item" href="#/sheet/ebay"            data-page="sheet/ebay" data-tip="eBay">
-        <span class="nav-icon expense-dot" data-abbr="EB">▸</span><span class="nav-label">eBay</span>
+        <span class="nav-icon nav-dot expense-dot" data-abbr="EB"></span><span class="nav-label">eBay</span>
       </a>
       <a class="nav-item" href="#/sheet/aliexpress"      data-page="sheet/aliexpress" data-tip="AliExpress">
-        <span class="nav-icon expense-dot" data-abbr="AE">▸</span><span class="nav-label">AliExpress</span>
+        <span class="nav-icon nav-dot expense-dot" data-abbr="AE"></span><span class="nav-label">AliExpress</span>
       </a>
       <a class="nav-item" href="#/sheet/other_expenses"  data-page="sheet/other_expenses" data-tip="Other Expenses">
-        <span class="nav-icon expense-dot" data-abbr="OE">▸</span><span class="nav-label">Other Expenses</span>
+        <span class="nav-icon nav-dot expense-dot" data-abbr="OE"></span><span class="nav-label">Other Expenses</span>
       </a>
     </div>
 
     <div class="sidebar-section">
       <div class="sidebar-label">TOOLS</div>
       <a class="nav-item" href="#/sponsor-tracker" data-page="sponsor-tracker" data-tip="Sponsor Tracker">
-        <span class="nav-icon">🎬</span><span class="nav-label">Sponsor Tracker</span>
+        <span class="nav-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="m10 9.2 4.8 2.8-4.8 2.8z"/></svg></span><span class="nav-label">Sponsor Tracker</span>
       </a>
       <a class="nav-item" href="#/freebies" data-page="freebies" data-tip="In-Kind Contributions">
-        <span class="nav-icon">🤝</span><span class="nav-label">In-Kind Contributions</span>
+        <span class="nav-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8M12 8v13M12 8H8.5a2.5 2.5 0 1 1 0-5C11 3 12 8 12 8zm0 0h3.5a2.5 2.5 0 1 0 0-5C13 3 12 8 12 8z"/></svg></span><span class="nav-label">In-Kind Contributions</span>
       </a>
       <a class="nav-item" href="#/statements" data-page="statements" data-tip="Bank Statements">
-        <span class="nav-icon">🏦</span><span class="nav-label">Bank Statements</span>
+        <span class="nav-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 4l9 6M5 10v8M9.7 10v8M14.3 10v8M19 10v8M3 21h18"/></svg></span><span class="nav-label">Bank Statements</span>
       </a>
     </div>
   </div>
 
   <div class="sidebar-section sidebar-bottom">
     <a class="nav-item" href="#/settings" data-page="settings" data-tip="Settings">
-      <span class="nav-icon">⚙</span><span class="nav-label">Settings</span>
+      <span class="nav-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></span><span class="nav-label">Settings</span>
     </a>
   </div>
 
@@ -113,7 +114,7 @@
     <span></span><span></span><span></span>
   </button>
   <div class="mobile-logo">
-    <span class="logo-icon">◈</span>
+    <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3.5 20.5 12 12 20.5 3.5 12z"/><path d="M12 8.5 15.5 12 12 15.5 8.5 12z" fill="currentColor" stroke="none"/></svg></span>
     <span class="logo-text">Mellow Labs</span>
   </div>
 </div>

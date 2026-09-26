@@ -1,5 +1,7 @@
 import { api }                    from "../api.js";
-import { showLoading, toast, gbp } from "../app.js";
+import { showLoading, toast, gbp, confirmModal } from "../app.js";
+import { parseIso, fmtIso }       from "../dates.js";
+import { ICON_EDIT, ICON_REFRESH, ICON_TRASH, ICON_CHECK, ICON_CLOCK } from "../icons.js";
 
 let _videos      = [];
 let _sponsorOpts = [];
@@ -118,44 +120,49 @@ function paintSortBar() {
   });
 }
 
-// Format "2026-01-04" → "4 Jan 2026"
-function fmtDate(iso) {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-");
-  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m - 1] || "";
-  return `${+d} ${mon} ${y}`;
-}
-
 // ── page skeleton ─────────────────────────────────────────────────────────────
 
-function buildPage() {
+function statsHtml() {
   const active     = _videos.filter(v => v.tracking_active).length;
   const totalBonus = _videos.reduce((s, v) => s + (v.milestone_payout || 0), 0);
+  // Money still owed: earned milestone bonuses not yet marked paid, plus flat
+  // rates still pending (their amounts aren't tracked, so they're counted).
+  const owedBonus  = _videos
+    .filter(v => v.milestones_enabled && v.milestone_payout > 0 && v.bonus_paid !== "Paid")
+    .reduce((s, v) => s + v.milestone_payout, 0);
+  const owedFlat   = _videos.filter(v => v.flat_rate_enabled && v.flat_rate_paid !== "Paid").length;
 
+  return `
+    <div class="stat-card">
+      <div class="stat-label">Tracking now</div>
+      <div class="stat-value">${active}</div>
+      <div class="stat-meta">of ${_videos.length} video${_videos.length !== 1 ? "s" : ""} · 30-day window</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Milestones earned</div>
+      <div class="stat-value">${gbp(totalBonus)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Awaiting payment</div>
+      <div class="stat-value ${owedBonus || owedFlat ? "pending" : ""}">${gbp(owedBonus)}</div>
+      <div class="stat-meta">${owedFlat
+        ? `plus ${owedFlat} flat rate${owedFlat !== 1 ? "s" : ""} pending`
+        : "no flat rates pending"}</div>
+    </div>`;
+}
+
+function buildPage() {
   return `
     <div class="page-header">
       <div class="page-title">Sponsor Tracker</div>
     </div>
 
     <div class="sponsor-add-bar">
-      <input type="text" id="sponsor-url-input" placeholder="Paste YouTube video URL…" />
-      <button class="btn btn-primary" id="btn-add-sponsor">Track Video</button>
+      <input type="text" id="sponsor-url-input" placeholder="Paste a YouTube video URL to start tracking…" />
+      <button class="btn btn-primary" id="btn-add-sponsor">Track video</button>
     </div>
 
-    <div class="stat-grid stat-grid-3" style="margin-bottom:24px;">
-      <div class="stat-card">
-        <div class="stat-label">Total Videos</div>
-        <div class="stat-value" id="stat-total">${_videos.length}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Active Tracking</div>
-        <div class="stat-value" id="stat-active">${active}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Milestones Earned</div>
-        <div class="stat-value" id="stat-bonus">${gbp(totalBonus)}</div>
-      </div>
-    </div>
+    <div class="stat-grid stat-grid-3" id="sponsor-stats">${statsHtml()}</div>
 
     <div class="table-card">
       ${renderSortBar()}
@@ -177,58 +184,85 @@ function renderList() {
   return `<div class="sponsor-list-cards">${displayVideos().map(renderRow).join("")}</div>`;
 }
 
-function renderRow(v) {
-  const badgeClass = v.tracking_active ? "active" : "ended";
-  const badgeText  = v.tracking_active ? "Active" : "Ended";
+// Milestone tiers — must match milestone_for() in services/sponsor_loader.py.
+const TIERS = [[5000, 100], [10000, 200], [20000, 300]];
 
+// How far the views are from the next bonus tier.
+function milestoneProgress(views) {
+  const i = TIERS.findIndex(([at]) => views < at);
+  if (i === -1) return { pct: 100, text: "Top tier reached" };
+  const from = i ? TIERS[i - 1][0] : 0;
+  const [at, pay] = TIERS[i];
+  return {
+    pct:  Math.max(2, ((views - from) / (at - from)) * 100),
+    text: `${(at - views).toLocaleString("en-GB")} views to ${gbp(pay)}`,
+  };
+}
+
+function payPill(label, enabled, paid) {
+  if (!enabled) return `<span class="sc-pill na"><span class="sc-pill-label">${label}</span>N/A</span>`;
+  return paid
+    ? `<span class="sc-pill paid"><span class="sc-pill-label">${label}</span>${ICON_CHECK}Paid</span>`
+    : `<span class="sc-pill pending"><span class="sc-pill-label">${label}</span>${ICON_CLOCK}Pending</span>`;
+}
+
+function renderRow(v) {
+  const views = Number(v.views) || 0;
   const thumb = v.thumbnail_url
     ? `<img src="${esc(v.thumbnail_url)}" loading="lazy" alt="" onerror="this.style.display='none'" />`
     : "";
 
   const left = v.milestones_enabled && v.tracking_active ? daysLeft(v.release_date_iso) : null;
   const daysTag = (left !== null && left > 0)
-    ? `<span class="sc-days-left ${left <= 3 ? "days-urgent" : left <= 10 ? "days-soon" : ""}">${left}d left</span>`
+    ? `<span class="sc-days ${left <= 3 ? "urgent" : left <= 10 ? "soon" : ""}">${left} day${left !== 1 ? "s" : ""} left</span>`
     : "";
 
-  const flatRateBox = v.flat_rate_enabled
-    ? `<div class="sc-pay-box ${v.flat_rate_paid === "Paid" ? "sc-paid" : "sc-pending"}">
-         <span class="sc-pay-label">Flat Rate</span>
-         <span class="sc-pay-status">${v.flat_rate_paid === "Paid" ? "Paid" : "Pending"}</span>
-       </div>`
-    : `<div class="sc-pay-box sc-disabled"><span class="sc-pay-label">Flat Rate</span><span class="sc-pay-status">N/A</span></div>`;
+  // While the 30-day window is open, show how close the next bonus tier is.
+  let progress = "";
+  if (v.milestones_enabled && v.tracking_active) {
+    const p = milestoneProgress(views);
+    progress = `
+      <div class="sc-progress" role="progressbar" aria-label="Progress to next milestone"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p.pct)}">
+        <div class="sc-progress-fill" style="width:${p.pct}%"></div>
+      </div>
+      <span class="sc-progress-text">${p.text}</span>`;
+  }
 
-  const milestoneBox = v.milestones_enabled
-    ? `<div class="sc-pay-box ${v.bonus_paid === "Paid" ? "sc-paid" : "sc-pending"}">
-         <span class="sc-pay-amount ${tierClass(v.milestone_payout)}">${gbp(v.milestone_payout)}</span>
-         <span class="sc-pay-status">${v.bonus_paid === "Paid" ? "Paid" : "Pending"}</span>
-       </div>`
-    : `<div class="sc-pay-box sc-disabled"><span class="sc-pay-amount">—</span><span class="sc-pay-status">N/A</span></div>`;
+  const milestoneLabel = v.milestones_enabled && v.milestone_payout > 0
+    ? `Milestone ${gbp(v.milestone_payout).replace(".00", "")}`
+    : "Milestone";
 
   return `
-    <div class="sponsor-card" data-row="${v.row_index}">
-      <div class="sc-thumb-wrap">
+    <article class="sponsor-card${v.tracking_active ? " is-active" : ""}" data-row="${v.row_index}">
+      <div class="sc-thumb">
         ${thumb}
-        <span class="tracking-badge-sm ${badgeClass}">${badgeText}</span>
+        <span class="sc-status ${v.tracking_active ? "active" : "ended"}">${v.tracking_active ? "Tracking" : "Ended"}</span>
       </div>
-      <div class="sc-meta">
+      <div class="sc-main">
         <div class="sc-title" title="${esc(v.title)}">${esc(v.title)}</div>
-        <div class="sc-views">${Number(v.views).toLocaleString()} views</div>
-        <div class="sc-date">${fmtDate(v.release_date_iso) || "—"}</div>
+        <div class="sc-meta">
+          ${v.sponsor ? `<span class="sc-sponsor">${esc(v.sponsor)}</span>` : `<span class="sc-sponsor none">No sponsor</span>`}
+          <span>${fmtIso(v.release_date_iso) || "No release date"}</span>
+          ${daysTag}
+        </div>
+        <div class="sc-views">
+          <span class="sc-views-num">${views.toLocaleString("en-GB")} views</span>
+          ${progress}
+        </div>
       </div>
-      <div class="sc-sponsor-box">
-        <div class="sc-sponsor-name">${esc(v.sponsor) || "—"}</div>
-        ${daysTag}
-      </div>
-      <div class="sc-payments">
-        ${flatRateBox}
-        ${milestoneBox}
+      <div class="sc-pay">
+        ${payPill("Flat rate", v.flat_rate_enabled, v.flat_rate_paid === "Paid")}
+        ${v.milestones_enabled && v.milestone_payout === 0
+          ? `<span class="sc-pill na"><span class="sc-pill-label">Milestone</span>Not reached</span>`
+          : payPill(milestoneLabel, v.milestones_enabled, v.bonus_paid === "Paid")}
       </div>
       <div class="sc-actions">
-        <button class="btn-icon btn-edit" data-row="${v.row_index}" title="Edit">✎</button>
-        <button class="btn-icon btn-refresh" data-row="${v.row_index}" title="Refresh views">↻</button>
-        <button class="btn-icon btn-delete danger" data-row="${v.row_index}" title="Remove">✕</button>
+        <button class="btn-icon btn-edit" data-row="${v.row_index}" title="Edit" aria-label="Edit">${ICON_EDIT}</button>
+        <button class="btn-icon btn-refresh" data-row="${v.row_index}" title="Refresh views" aria-label="Refresh views">${ICON_REFRESH}</button>
+        <button class="btn-icon btn-delete danger" data-row="${v.row_index}" title="Remove" aria-label="Remove">${ICON_TRASH}</button>
       </div>
-    </div>
+    </article>
   `;
 }
 
@@ -301,13 +335,6 @@ function daysLeft(iso) {
   return Math.max(0, 30 - elapsed);
 }
 
-function tierClass(p) {
-  if (p >= 300) return "tier-300";
-  if (p >= 200) return "tier-200";
-  if (p >= 100) return "tier-100";
-  return "tier-0";
-}
-
 function esc(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;")
@@ -322,14 +349,8 @@ function rerenderList() {
 }
 
 function updateStats() {
-  const active     = _videos.filter(v => v.tracking_active).length;
-  const totalBonus = _videos.reduce((s, v) => s + (v.milestone_payout || 0), 0);
-  const t = document.getElementById("stat-total");
-  const a = document.getElementById("stat-active");
-  const b = document.getElementById("stat-bonus");
-  if (t) t.textContent = _videos.length;
-  if (a) a.textContent = active;
-  if (b) b.textContent = gbp(totalBonus);
+  const el = document.getElementById("sponsor-stats");
+  if (el) el.innerHTML = statsHtml();
 }
 
 function videoByRowIndex(idx) {
@@ -455,11 +476,10 @@ function openModal(rowIndex) {
   // Destroy any previous flatpickr instance before re-initialising
   if (_datepicker) { _datepicker.destroy(); _datepicker = null; }
   const rdInput = document.getElementById("modal-release-date");
-  // Pre-fill from ISO date so the calendar opens on the right month
-  const initialDate = v.release_date_iso || null;
+  // Pre-fill as a Date so the calendar opens on the right day (see parseIso)
   _datepicker = flatpickr(rdInput, {
     dateFormat: "d/m/Y",
-    defaultDate: initialDate || undefined,
+    defaultDate: parseIso(v.release_date_iso),
     allowInput: true,
   });
 
@@ -591,7 +611,7 @@ async function handleAdd(urlInput) {
     toast(_extractError(err), "error");
   } finally {
     btn.disabled = false;
-    btn.textContent = "Track Video";
+    btn.textContent = "Track video";
   }
 }
 
@@ -599,7 +619,7 @@ async function handleRefresh(e) {
   const btn = e.currentTarget;
   const row = parseInt(btn.dataset.row, 10);
   btn.disabled = true;
-  btn.textContent = "…";
+  btn.classList.add("spinning");
 
   try {
     const updated = await api.sponsorRefresh(row);
@@ -607,11 +627,11 @@ async function handleRefresh(e) {
     if (idx !== -1) _videos[idx] = updated;
     rerenderList();
     updateStats();
-    toast(`Views updated to ${Number(updated.views).toLocaleString()}`);
+    toast(`Views updated to ${Number(updated.views).toLocaleString("en-GB")}`);
   } catch (err) {
     toast(_extractError(err), "error");
     btn.disabled = false;
-    btn.textContent = "↻";
+    btn.classList.remove("spinning");
   }
 }
 
@@ -619,7 +639,8 @@ async function handleDelete(e) {
   const btn   = e.currentTarget;
   const row   = parseInt(btn.dataset.row, 10);
   const video = videoByRowIndex(row);
-  if (!confirm(`Remove "${video?.title || "this video"}" from tracking?`)) return;
+  if (!(await confirmModal(`Remove “${video?.title || "this video"}” from tracking?`,
+        { title: "Remove video", okText: "Remove" }))) return;
 
   btn.disabled = true;
   try {

@@ -24,7 +24,7 @@ export async function renderSettings(container) {
           <input type="password" id="yt-api-key"
                  placeholder="${keySet ? "Enter a new key to replace the current one" : "Paste your API key here"}"
                  autocomplete="off" spellcheck="false" />
-          <button class="btn btn-ghost" id="btn-toggle-key">Show</button>
+          <button class="btn btn-secondary" id="btn-toggle-key">Show</button>
         </div>
         <div class="settings-hint" id="settings-hint">
           ${keySet

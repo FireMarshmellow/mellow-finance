@@ -30,9 +30,9 @@ function isBlank(s) {
   return s == null || s === "" || s === "—" || s === "-" || s === "–";
 }
 
-// "£1,234.56" → 1234.56 · "(50)" → -50 · anything else → null
+// "£1,234.56" → 1234.56 · "−£50" / "(50)" → -50 · anything else → null
 function parseNum(s) {
-  const t = String(s).replace(/[£$€,\s]/g, "").replace(/^\((.*)\)$/, "-$1");
+  const t = String(s).replace(/−/g, "-").replace(/[£$€,\s]/g, "").replace(/^\((.*)\)$/, "-$1");
   if (!/^-?\d*\.?\d+%?$/.test(t)) return null;
   const n = parseFloat(t);
   return isNaN(n) ? null : n;

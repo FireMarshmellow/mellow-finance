@@ -105,12 +105,15 @@ export function promptModal(message, defaultValue = "", { title = "Enter a value
 }
 
 // ── Currency formatter ─────────────────────────────────────────────────────
+// Negatives read "−£750.96" (a true minus, before the sign), never "£-750.96".
 export function gbp(n) {
   if (n == null || n === "") return "—";
-  return "£" + Number(n).toLocaleString("en-GB", {
+  const v = Number(n);
+  const s = "£" + Math.abs(v).toLocaleString("en-GB", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+  return v < 0 && s !== "£0.00" ? "−" + s : s;
 }
 
 // ── Sidebar: mobile drawer + desktop collapse ──────────────────────────────

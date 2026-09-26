@@ -7,6 +7,8 @@
 import { api }                              from "../api.js";
 import { showLoading, toast,
          confirmModal, promptModal }        from "../app.js";
+import { ICON_EDIT, ICON_TRASH, ICON_EYE, ICON_DOWNLOAD,
+         ICON_FILE, ICON_PLUS, ICON_CHEVRON, ICON_UPLOAD } from "../icons.js";
 
 let _root          = null;
 let _accounts      = [];
@@ -146,12 +148,12 @@ function buildPage() {
       <div>
         <div class="page-title">Bank Statements</div>
       </div>
-      <button class="btn btn-primary" id="stmt-add-account">＋ Add Account</button>
+      <button class="btn btn-primary" id="stmt-add-account">${ICON_PLUS} Add account</button>
     </div>
 
     <div class="table-card">
       <div class="sheet-toolbar">
-        <span style="font-size:12px;color:var(--text-muted)">
+        <span class="toolbar-count">
           ${_accounts.length} account${_accounts.length !== 1 ? "s" : ""}
         </span>
         ${_accounts.length ? `
@@ -168,7 +170,7 @@ function buildPage() {
 function renderTree() {
   if (!_accounts.length) {
     return `<div class="empty-state" style="padding:40px 0">
-      No accounts yet. Click <strong>＋ Add Account</strong> to create one (e.g. “Business Current”, “Personal Savings”).
+      No accounts yet. Use <strong>Add account</strong> to create one (e.g. “Business Current”, “Personal Savings”).
     </div>`;
   }
   return `<div class="stmt-tree">${_accounts.map(renderAccountGroup).join("")}</div>`;
@@ -180,12 +182,12 @@ function renderAccountGroup(acc) {
   return `
     <div class="stmt-group stmt-account ${open ? "open" : ""}">
       <div class="stmt-group-head" data-key="${key}" role="button" aria-expanded="${open}">
-        <span class="stmt-caret">▸</span>
+        <span class="stmt-caret">${ICON_CHEVRON}</span>
         <span class="stmt-group-label">${esc(acc.name)}</span>
         <span class="stmt-group-count">${acc.file_count}</span>
         <span class="stmt-group-actions">
-          <button class="btn-icon stmt-rename" data-id="${acc.id}" title="Rename account">✎</button>
-          <button class="btn-icon danger stmt-del-account" data-id="${acc.id}" title="Delete account">✕</button>
+          <button class="btn-icon stmt-rename" data-id="${acc.id}" title="Rename account" aria-label="Rename account">${ICON_EDIT}</button>
+          <button class="btn-icon danger stmt-del-account" data-id="${acc.id}" title="Delete account" aria-label="Delete account">${ICON_TRASH}</button>
         </span>
       </div>
       <div class="stmt-group-body">
@@ -199,7 +201,7 @@ function renderAccountBody(acc) {
   return `
     <label class="stmt-dropzone stmt-dropzone-sm" data-id="${acc.id}">
       <input type="file" class="stmt-file-input" data-id="${acc.id}" accept="application/pdf,.pdf" multiple hidden />
-      <div class="stmt-dropzone-text"><strong>Click to upload</strong> or drop PDFs here</div>
+      <div class="stmt-dropzone-text">${ICON_UPLOAD}<span><strong>Click to upload</strong> or drop PDFs here</span></div>
       <div class="stmt-dropzone-hint">PDF only · up to 25 MB each</div>
     </label>
     ${groups.length
@@ -214,7 +216,7 @@ function renderYearGroup(acc, g) {
   return `
     <div class="stmt-group stmt-year ${open ? "open" : ""}">
       <div class="stmt-group-head" data-key="${key}" role="button" aria-expanded="${open}">
-        <span class="stmt-caret">▸</span>
+        <span class="stmt-caret">${ICON_CHEVRON}</span>
         <span class="stmt-group-label">${g.year}</span>
         <span class="stmt-group-count">${g.files.length}</span>
       </div>
@@ -229,12 +231,12 @@ function renderStmtRow(acc, f) {
   const dlUrl   = api.stmtFileUrl(acc.id, f.filename, true);
   return `
     <div class="stmt-row">
-      <a class="stmt-row-name" href="${viewUrl}" target="_blank" rel="noopener" title="${esc(f.filename)}">📄 ${esc(fmtPeriod(f))}</a>
+      <a class="stmt-row-name" href="${viewUrl}" target="_blank" rel="noopener" title="${esc(f.filename)}"><span class="stmt-file-icon">${ICON_FILE}</span>${esc(fmtPeriod(f))}</a>
       <span class="stmt-row-size">${fmtSize(f.size)}</span>
       <span class="stmt-row-actions">
-        <a class="btn-icon" href="${viewUrl}" target="_blank" rel="noopener" title="View">👁</a>
-        <a class="btn-icon" href="${dlUrl}" title="Download">↓</a>
-        <button class="btn-icon stmt-delete danger" data-id="${acc.id}" data-name="${esc(f.filename)}" title="Delete">✕</button>
+        <a class="btn-icon" href="${viewUrl}" target="_blank" rel="noopener" title="View" aria-label="View">${ICON_EYE}</a>
+        <a class="btn-icon" href="${dlUrl}" title="Download" aria-label="Download">${ICON_DOWNLOAD}</a>
+        <button class="btn-icon stmt-delete danger" data-id="${acc.id}" data-name="${esc(f.filename)}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>
       </span>
     </div>`;
 }
